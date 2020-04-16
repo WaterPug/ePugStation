@@ -1,0 +1,238 @@
+#include "CPU.h"
+#include <Utilities/OpUtilities.h>
+#include <iostream>
+
+namespace ePugStation
+{
+	CPU::CPU() :
+		m_ip(BIOS_ROM),
+		m_sr(0),
+		m_loadPair({ 0, 0 })
+	{
+		m_nextInstruction.op = 0x0;
+
+		m_registers.fill(0xdeadbeef);
+		m_registers[0] = 0; // Constant R0
+	}
+
+	void CPU::runNextInstruction()
+	{
+		Instruction currentInstruction(m_nextInstruction);
+		m_nextInstruction = Instruction(load32(m_ip));
+		// Point IP to next instruction
+		m_ip += 4;
+		std::cout << "m_ip : " + std::to_string(m_ip) + "\n";
+		setReg(m_loadPair);
+		m_loadPair = { 0,0 };
+		decodeAndExecute(currentInstruction.op);
+		m_registers = m_outputRegisters;
+	}
+
+	uint32_t CPU::load32(uint32_t address) const
+	{
+		return m_interconnect.load32(address);
+	}
+
+	void CPU::store32(uint32_t address, uint32_t value)
+	{
+		m_interconnect.store32(address, value);
+	}
+
+	void CPU::decodeAndExecute(uint32_t instruction)
+	{
+		Instruction formatedInstruction;
+		formatedInstruction.op = instruction;
+
+		matchOp(formatedInstruction);
+	}
+
+	void CPU::matchOp(Instruction instruction)
+	{
+		switch (instruction.function)
+		{
+		case 0b000000:
+			if (instruction.ShiftOperation.sub == 0b000000)
+				opSLL(instruction);
+			else if (instruction.ShiftOperation.sub == 0b100001)
+				opADDU(instruction);
+			else if (instruction.ShiftOperation.sub == 0b100101)
+				opOR(instruction);
+			else if (instruction.ShiftOperation.sub == 0b101011)
+				opSLTU(instruction);
+			else
+				throw std::runtime_error("SubOperation not implemented...");
+			break;
+		case 0b000010:
+			opJ(instruction);
+			break;
+		case 0b001000:
+			opADDI(instruction);
+			break;
+		case 0b001001:
+			opADDIU(instruction);
+			break;
+		case 0b000101:
+			opBNE(instruction);
+			break;
+		case 0b001101:
+			opRUI(instruction);
+			break;
+		case 0b001111:
+			opLUI(instruction);
+			break;
+		case 0b010000:
+			opCop0(instruction);
+			break;
+		case 0b100011:
+			opLW(instruction);
+			break;
+		case 0b101011:
+			opSW(instruction);
+			break;
+
+		default:
+			throw std::runtime_error("Instruction function not implemented with function : " + std::to_string(instruction.function));
+		}
+	}
+
+	void CPU::setReg(uint32_t index, uint32_t value)
+	{
+		m_outputRegisters[index] = value;
+		m_outputRegisters[0] = 0;
+	}
+
+	void CPU::setReg(std::pair<uint32_t, uint32_t> setRegPair)
+	{
+		m_outputRegisters[setRegPair.first] = setRegPair.second;
+		m_outputRegisters[0] = 0;
+	}
+
+	void CPU::branch(uint32_t offset)
+	{
+		m_ip -= 4;
+		m_ip += (offset << 2);
+	}
+
+	void CPU::opCop0(Instruction instruction)
+	{
+		auto regValue = m_registers[instruction.t];
+		switch (instruction.s)
+		{
+		case 0b00100:
+			// To be used when Cop0 registers are implemented
+			//auto copRegIndex = instruction.ShiftOperation.d;
+			switch (instruction.ShiftOperation.d)
+			{
+			case 3:
+			case 5:
+			case 6:
+			case 7:
+			case 9:
+			case 11:
+				if (regValue != 0)
+					throw std::runtime_error("Unhandled write to cop0r");
+				break;
+			case 12:
+				m_sr = regValue;
+				break;
+			case 13:
+				if (regValue != 0)
+					throw std::runtime_error("Unhandled write to CAUSE register!");
+				break;
+			default:
+				throw std::runtime_error("Unhandled cop Reg value...");
+			}
+			break;
+		default:
+			throw std::runtime_error("Unhandled cop0 instruction...");
+		}
+	}
+
+	void CPU::opSLTU(Instruction instruction)
+	{
+		setReg(instruction.ShiftOperation.d, m_registers[instruction.s] < m_registers[instruction.t]);
+	}
+
+	void CPU::opBNE(Instruction instruction)
+	{
+		if (m_registers[instruction.s] != m_registers[instruction.t])
+		{
+			branch(instruction.imm);
+		}
+	}
+
+	void CPU::opOR(Instruction instruction)
+	{
+		setReg(instruction.ShiftOperation.d, m_registers[instruction.s] | m_registers[instruction.ShiftOperation.t]);
+	}
+
+	void CPU::opORI(Instruction instruction)
+	{
+		setReg(instruction.t, m_registers[instruction.s] | instruction.imm);
+	}
+
+	void CPU::opJ(Instruction instruction)
+	{
+		m_ip = (m_ip & 0xF0000000) | (instruction.immJump() << 2);
+	}
+
+	void CPU::opADDU(Instruction instruction)
+	{
+		setReg(instruction.ShiftOperation.d, m_registers[instruction.s] + m_registers[instruction.t]);
+	}
+
+	void CPU::opADDIU(Instruction instruction)
+	{
+		setReg(instruction.t, m_registers[instruction.s] + instruction.imm);
+	}
+
+	void CPU::opADDI(Instruction instruction)
+	{
+		uint32_t result = 0;
+		if (!safeAdd(m_registers[instruction.s], instruction.imm, result))
+		{
+			// TODO: Exception handling here
+		}
+		else
+		{
+			setReg(instruction.t, result);
+		}
+	}
+
+	void CPU::opSLL(Instruction instruction)
+	{
+		setReg(instruction.ShiftOperation.d, m_registers[instruction.t] << instruction.ShiftOperation.h);
+	}
+
+	void CPU::opLW(Instruction instruction)
+	{
+		if ((m_sr & 0x10000) != 0)
+		{
+			std::cout << "Ignoring load while cache is isolated...\n";
+			return;
+		}
+		uint32_t address = m_registers[instruction.s] + instruction.imm;
+		m_loadPair = { instruction.t, load32(address) };
+	}
+
+	void CPU::opSW(Instruction instruction)
+	{
+		if ((m_sr & 0x10000) != 0)
+		{
+			std::cout << "Ignoring store while cache is isolated...\n";
+			return;
+		}
+		uint32_t address = m_registers[instruction.s] + instruction.imm;
+		store32(address, m_registers[instruction.t]);
+	}
+
+	void CPU::opRUI(Instruction instruction)
+	{
+		setReg(instruction.t, instruction.imm | m_registers[instruction.s]);
+	}
+
+	void CPU::opLUI(Instruction instruction)
+	{
+		setReg(instruction.t, (instruction.imm << 16));
+	}
+}
