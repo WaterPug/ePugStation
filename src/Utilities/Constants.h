@@ -9,7 +9,7 @@ namespace ePugStation
 {
 	// BIOS related
 	constexpr uint32_t BIOS_ROM = 0xbfc00000;
-	constexpr char PATH_TO_BIOS[] = "D:\\GitRepo\\ePugStation\\ePugStation\\Resources\\SCPH1001.BIN";
+	constexpr char PATH_TO_BIOS[] = "D:\\GitRepo\\ePugStation\\ePugStation\\data\\SCPH1001.BIN";
 	constexpr size_t BIOS_MEMORY_SIZE = 514 * 1024;
 	constexpr Range<BIOS_ROM, BIOS_MEMORY_SIZE> BIOS_RANGE;
 

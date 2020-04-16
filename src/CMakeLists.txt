@@ -1,0 +1,3 @@
+add_subdirectory(Utilities)
+add_subdirectory(Architecture)
+add_subdirectory(Main)
