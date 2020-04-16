@@ -43,10 +43,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>D:\GitRepo\ePugStation\ePugStation\ePugStation\src\;$(IncludePath)</IncludePath>
+    <IncludePath>D:\GitRepo\ePugStation\ePugStation\src\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>D:\GitRepo\ePugStation\ePugStation\ePugStation\src\;$(IncludePath)</IncludePath>
+    <IncludePath>D:\GitRepo\ePugStation\ePugStation\src\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

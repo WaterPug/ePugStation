@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.421
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ePugStation", "ePugStation\ePugStation.vcxproj", "{E1C1545C-6A8C-430E-8A63-B91755F20E79}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ePugStation", "ePugStation.vcxproj", "{E1C1545C-6A8C-430E-8A63-B91755F20E79}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,6 +20,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {0CFED08C-E488-443A-BDAB-2270148CBC64}
+		SolutionGuid = {3171F8AB-AA67-414F-A08B-3A5CDBDA8896}
 	EndGlobalSection
 EndGlobal
