@@ -5,7 +5,7 @@
 namespace ePugStation
 {
 	CPU::CPU() :
-		m_ip(BIOS_ROM),
+		m_ip(BIOS_ROM_LOGICAL),
 		m_sr(0),
 		m_loadPair({ 0, 0 })
 	{
@@ -26,6 +26,26 @@ namespace ePugStation
 		m_loadPair = { 0,0 };
 		decodeAndExecute(currentInstruction.op);
 		m_registers = m_outputRegisters;
+	}
+
+	uint32_t CPU::load8(uint32_t address) const
+	{
+		return m_interconnect.load8(address);
+	}
+
+	void CPU::store8(uint32_t address, uint32_t value)
+	{
+		m_interconnect.store8(address, value);
+	}
+
+	uint32_t CPU::load16(uint32_t address) const
+	{
+		return m_interconnect.load16(address);
+	}
+
+	void CPU::store16(uint32_t address, uint32_t value)
+	{
+		m_interconnect.store16(address, value);
 	}
 
 	uint32_t CPU::load32(uint32_t address) const
@@ -85,6 +105,9 @@ namespace ePugStation
 			break;
 		case 0b100011:
 			opLW(instruction);
+			break;
+		case 0b101001:
+			opSH(instruction);
 			break;
 		case 0b101011:
 			opSW(instruction);
@@ -213,6 +236,16 @@ namespace ePugStation
 		}
 		uint32_t address = m_registers[instruction.s] + instruction.imm;
 		m_loadPair = { instruction.t, load32(address) };
+	}
+
+	void CPU::opSH(Instruction instruction)
+	{
+		if ((m_sr & 0x10000) != 0)
+		{
+			std::cout << "Ignoring store while cache is isolated...\n";
+			return;
+		}
+		uint32_t address = m_registers[instruction.s] + instruction.imm;
 	}
 
 	void CPU::opSW(Instruction instruction)
