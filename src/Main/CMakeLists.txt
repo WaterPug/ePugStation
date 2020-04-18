@@ -1,2 +1,0 @@
-add_executable(ePugStation main.cpp)
-target_link_libraries(ePugStation PUBLIC Architecture)
