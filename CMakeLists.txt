@@ -18,7 +18,7 @@ file(
     "${_src_root_path}/*.h*"
 )
 
-add_library(ePugStation ${_source_list})
+add_executable(ePugStation ${_source_list})
 
 foreach(_source IN ITEMS ${_source_list})
     get_filename_component(_source_path "${_source}" PATH)
