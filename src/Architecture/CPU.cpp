@@ -70,51 +70,122 @@ namespace ePugStation
 	{
 		switch (instruction.function)
 		{
-		case 0b000000:
-			if (instruction.ShiftOperation.sub == 0b000000)
-				opSLL(instruction);
-			else if (instruction.ShiftOperation.sub == 0b100001)
-				opADDU(instruction);
-			else if (instruction.ShiftOperation.sub == 0b100101)
-				opOR(instruction);
-			else if (instruction.ShiftOperation.sub == 0b101011)
-				opSLTU(instruction);
-			else
-				throw std::runtime_error("SubOperation not implemented...");
-			break;
-		case 0b000010:
-			opJ(instruction);
-			break;
-		case 0b001000:
-			opADDI(instruction);
-			break;
-		case 0b001001:
-			opADDIU(instruction);
-			break;
-		case 0b000101:
-			opBNE(instruction);
-			break;
-		case 0b001101:
-			opORI(instruction);
-			break;
-		case 0b001111:
-			opLUI(instruction);
-			break;
-		case 0b010000:
-			opCop0(instruction);
-			break;
-		case 0b100011:
-			opLW(instruction);
-			break;
-		case 0b101001:
-			opSH(instruction);
-			break;
-		case 0b101011:
-			opSW(instruction);
-			break;
+			// Sub Op
+		case 0b000000: matchSubOp(instruction); break;
+
+			// Jump
+		case 0b000010: opJ(instruction); break;
+		case 0b000011: opJAL(instruction); break;
+
+			// Add
+		case 0b001000: opADDI(instruction); break;
+		case 0b001001: opADDIU(instruction); break;
+
+			// And
+		case 0b001100: opANDI(instruction); break;
+
+			// Branch
+		case 0b000100: opBEQ(instruction); break;
+		case 0b000101: opBNE(instruction); break;
+		case 0b000001: matchSubBranchOp(instruction); break;
+		case 0b000111: opBGTZ(instruction); break;
+		case 0b000110: opBLEZ(instruction); break;
+
+			// Load
+		case 0b001111: opLUI(instruction); break;
+		case 0b100000: opLB(instruction); break;
+		case 0b100001: opLH(instruction); break;
+		case 0b100011: opLW(instruction); break;
+
+			// OR
+		case 0b001101: opORI(instruction); break;
+
+			// Store
+		case 0b101000: opSB(instruction); break;
+		case 0b101001: opSH(instruction); break;
+		case 0b101011: opSW(instruction); break;
+
+			// Set
+		case 0b001010: opSLTI(instruction); break;
+		case 0b001011: opSLTIU(instruction); break;
+
+			// XOR
+		case 0b001110: opXORI(instruction); break;
+
+			// Cop
+		case 0b010000: opCop0(instruction); break;
 
 		default:
 			throw std::runtime_error("Instruction function not implemented with function : " + std::to_string(instruction.function));
+		}
+	}
+
+	void CPU::matchSubBranchOp(Instruction instruction)
+	{
+
+		switch (instruction.t)
+		{
+		case 0b00001: opBGEZ(instruction); break;
+		case 0b10001: opBGEZAL(instruction); break;
+		case 0b00000: opBLTZ(instruction); break;
+		case 0b10000: opBLTZAL(instruction); break;
+		default:
+			throw std::runtime_error("Unsupported t value at address : " + std::to_string(instruction.function));
+		}
+
+	}
+
+	void CPU::matchSubOp(Instruction instruction)
+	{
+		switch (instruction.SubOperation.sub)
+		{
+			// Add
+		case 0b100000: opADD(instruction); break;
+		case 0b100001: opADDU(instruction); break;
+
+			// And
+		case 0b100100: opAND(instruction); break;
+
+			// Div
+		case 0b011010: opDIV(instruction); break;
+		case 0b011011: opDIVU(instruction); break;
+
+			// Jump
+		case 0b001000: opJR(instruction); break;
+
+			// Move
+		case 0b010000: opMFHI(instruction); break;
+		case 0b010010: opMFLO(instruction); break;
+
+			// Mult
+		case 0b011000: opMULT(instruction); break;
+		case 0b011001: opMULTU(instruction); break;
+
+			// Or
+		case 0b100101: opOR(instruction); break;
+
+			// Shift Left
+		case 0b000000: opSLL(instruction);  break;
+		case 0b000100: opSLLV(instruction); break;
+
+			// Set
+		case 0b101010: opSLT(instruction); break;
+		case 0b101011: opSLTU(instruction);  break;
+
+			// Shift right
+		case 0b000011: opSRA(instruction);  break;
+		case 0b000010: opSRL(instruction);  break;
+		case 0b000110: opSRLV(instruction);  break;
+
+			// Sub
+		case 0b100010: opSUB(instruction); break;
+		case 0b100011: opSUBU(instruction); break;
+
+			// XOR
+		case 0b100110: opXOR(instruction); break;
+
+		default:
+			throw std::runtime_error("SubOperation not implemented...");
 		}
 	}
 
@@ -143,8 +214,8 @@ namespace ePugStation
 		{
 		case 0b00100:
 			// To be used when Cop0 registers are implemented
-			//auto copRegIndex = instruction.ShiftOperation.d;
-			switch (instruction.ShiftOperation.d)
+			//auto copRegIndex = instruction.SubOperation.d;
+			switch (instruction.SubOperation.d)
 			{
 			case 3:
 			case 5:
@@ -171,6 +242,11 @@ namespace ePugStation
 		}
 	}
 
+	void CPU::opSLT(Instruction instruction)
+	{
+		throw std::runtime_error("NOT IMPLEMENTED");
+	}
+
 	void CPU::opSLTI(Instruction instruction)
 	{
 		throw std::runtime_error("NOT IMPLEMENTED");
@@ -183,7 +259,7 @@ namespace ePugStation
 
 	void CPU::opSLTU(Instruction instruction)
 	{
-		setReg(instruction.ShiftOperation.d, m_registers[instruction.s] < m_registers[instruction.t]);
+		setReg(instruction.SubOperation.d, m_registers[instruction.s] < m_registers[instruction.t]);
 	}
 
 	void CPU::opSRA(Instruction instruction)
@@ -221,6 +297,11 @@ namespace ePugStation
 		throw std::runtime_error("NOT IMPLEMENTED");
 	}
 
+	void CPU::opSYSCALL(Instruction instruction)
+	{
+		// Do nothing...
+	}
+
 	void CPU::opBNE(Instruction instruction)
 	{
 		if (m_registers[instruction.s] != m_registers[instruction.t])
@@ -241,7 +322,7 @@ namespace ePugStation
 
 	void CPU::opOR(Instruction instruction)
 	{
-		setReg(instruction.ShiftOperation.d, m_registers[instruction.s] | m_registers[instruction.ShiftOperation.t]);
+		setReg(instruction.SubOperation.d, m_registers[instruction.s] | m_registers[instruction.SubOperation.t]);
 	}
 
 	void CPU::opORI(Instruction instruction)
@@ -266,7 +347,7 @@ namespace ePugStation
 
 	void CPU::opADDU(Instruction instruction)
 	{
-		setReg(instruction.ShiftOperation.d, m_registers[instruction.s] + m_registers[instruction.t]);
+		setReg(instruction.SubOperation.d, m_registers[instruction.s] + m_registers[instruction.t]);
 	}
 
 	void CPU::opAND(Instruction instruction)
@@ -339,7 +420,7 @@ namespace ePugStation
 
 	void CPU::opSLL(Instruction instruction)
 	{
-		setReg(instruction.ShiftOperation.d, m_registers[instruction.t] << instruction.ShiftOperation.h);
+		setReg(instruction.SubOperation.d, m_registers[instruction.t] << instruction.SubOperation.h);
 	}
 
 	void CPU::opSLLV(Instruction instruction)

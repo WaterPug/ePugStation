@@ -35,6 +35,8 @@ namespace ePugStation
 		uint32_t m_sr; // Temporary Cop0 register value. Sr = register #12 -- System status register (R/W)
 
 		void matchOp(Instruction instruction);
+		void matchSubOp(Instruction instruction);
+		void matchSubBranchOp(Instruction instruction);
 
 		void setReg(uint32_t index, uint32_t value);
 		void setReg(std::pair<uint32_t, uint32_t> setRegPair);
@@ -99,6 +101,7 @@ namespace ePugStation
 		void opSLLV(Instruction instruction);
 
 		// Set
+		void opSLT(Instruction instruction);
 		void opSLTI(Instruction instruction);
 		void opSLTIU(Instruction instruction);
 		void opSLTU(Instruction instruction);
@@ -115,6 +118,9 @@ namespace ePugStation
 		// XOR
 		void opXOR(Instruction instruction);
 		void opXORI(Instruction instruction);
+
+		// SYSCALL
+		void opSYSCALL(Instruction instruction);
 
 		// Coprocessor operations
 		void opCop0(Instruction instruction);

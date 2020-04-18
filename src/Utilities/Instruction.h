@@ -35,7 +35,7 @@ namespace ePugStation
 						unsigned t : 5; // [20:16]
 						unsigned s : 5; // [25:21]
 						unsigned function : 6; // [31:26]
-					}ShiftOperation;
+					}SubOperation;
 				};
 			};
 		};
