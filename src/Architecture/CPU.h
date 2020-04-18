@@ -14,11 +14,11 @@ namespace ePugStation
 		CPU();
 		~CPU() = default;
 
-		uint32_t load8(uint32_t address) const;
-		uint32_t load16(uint32_t address) const;
+		uint8_t load8(uint32_t address) const;
+		uint16_t load16(uint32_t address) const;
 		uint32_t load32(uint32_t address) const;
-		void store8(uint32_t address, uint32_t value);
-		void store16(uint32_t address, uint32_t value);
+		void store8(uint32_t address, uint8_t value);
+		void store16(uint32_t address, uint16_t value);
 		void store32(uint32_t address, uint32_t value);
 
 		void runNextInstruction();
@@ -42,25 +42,82 @@ namespace ePugStation
 		// Branch 
 		void branch(uint32_t offset);
 
-		// Operations
-		void opSLTU(Instruction instruction);
-		void opBNE(Instruction instruction);
-		void opLUI(Instruction instruction);
-		void opRUI(Instruction instruction);
-		void opLW(Instruction instruction);
-		void opSW(Instruction instruction);
-		void opSH(Instruction instruction);
-		void opSLL(Instruction instruction);
+		// ADD
+		void opADD(Instruction instruction);
+		void opADDI(Instruction instruction);
 		void opADDIU(Instruction instruction);
 		void opADDU(Instruction instruction);
-		void opADDI(Instruction instruction);
+
+		// AND 
+		void opAND(Instruction instruction);
+		void opANDI(Instruction instruction);
+
+		// Branch
+		void opBEQ(Instruction instruction);
+		void opBGEZ(Instruction instruction);
+		void opBGEZAL(Instruction instruction);
+		void opBGTZ(Instruction instruction);
+		void opBLEZ(Instruction instruction);
+		void opBLTZ(Instruction instruction);
+		void opBLTZAL(Instruction instruction);
+		void opBNE(Instruction instruction);
+
+		// Division
+		void opDIV(Instruction instruction);
+		void opDIVU(Instruction instruction);
+
+		// Jump
 		void opJ(Instruction instruction);
+		void opJAL(Instruction instruction);
+		void opJR(Instruction instruction);
+
+		// Loads
+		void opLB(Instruction instruction);
+		void opLH(Instruction instruction);
+		void opLUI(Instruction instruction);
+		void opLW(Instruction instruction);
+
+		// Move
+		void opMFHI(Instruction instruction);
+		void opMFLO(Instruction instruction);
+
+		// Mult
+		void opMULT(Instruction instruction);
+		void opMULTU(Instruction instruction);
+
+		// Or
 		void opOR(Instruction instruction);
 		void opORI(Instruction instruction);
 
+		// Store
+		void opSB(Instruction instruction);
+		void opSW(Instruction instruction);
+		void opSH(Instruction instruction);
+
+		// Shift
+		void opSLL(Instruction instruction);
+		void opSLLV(Instruction instruction);
+
+		// Set
+		void opSLTI(Instruction instruction);
+		void opSLTIU(Instruction instruction);
+		void opSLTU(Instruction instruction);
+
+		// Shift right
+		void opSRA(Instruction instruction);
+		void opSRL(Instruction instruction);
+		void opSRLV(Instruction instruction);
+
+		// SUB
+		void opSUB(Instruction instruction);
+		void opSUBU(Instruction instruction);
+
+		// XOR
+		void opXOR(Instruction instruction);
+		void opXORI(Instruction instruction);
+
 		// Coprocessor operations
 		void opCop0(Instruction instruction);
-
 	};
 }
 #endif

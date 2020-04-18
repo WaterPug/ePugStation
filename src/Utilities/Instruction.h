@@ -42,7 +42,7 @@ namespace ePugStation
 
 		uint32_t immJump()
 		{
-			return op & 0x3FFFFFF;
+			return op & 0x03FFFFFF;
 		}
 	};
 }

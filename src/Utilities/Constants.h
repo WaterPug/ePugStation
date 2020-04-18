@@ -39,5 +39,15 @@ namespace ePugStation
 
 	// CPU related
 	constexpr uint32_t CPU_REGISTERS = 32;
+
+	// SPU
+	constexpr uint32_t SPU_START = 0x1f801c00;
+	constexpr uint32_t SPU_SIZE = 0xE80 - 0xC00;
+	constexpr Range<SPU_START, SPU_SIZE> SPU_RANGE;
+
+
+	// General uses
+	constexpr uint32_t ALIGNED_FOR_32_BITS = 4;
+	constexpr uint32_t ALIGNED_FOR_16_BITS = 2;
 }
 #endif

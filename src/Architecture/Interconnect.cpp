@@ -25,19 +25,31 @@ namespace
 
 namespace ePugStation
 {
-	uint32_t Interconnect::load8(uint32_t address) const
+	uint8_t Interconnect::load8(uint32_t address) const
 	{
 		throw std::runtime_error("TODO");
 	}
 
-	uint32_t Interconnect::load16(uint32_t address) const
+	uint16_t Interconnect::load16(uint32_t address) const
 	{
-		throw std::runtime_error("TODO");
+		checkIfAlignedBy<ALIGNED_FOR_16_BITS>(address);
+
+		uint32_t physicalAddress = maskRegion(address);
+
+		if (SPU_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled SPU load16, ignoring...\n";
+			throw std::runtime_error("unhandled interconnect load16 address..." + std::to_string(physicalAddress));
+		}
+		else
+		{
+			throw std::runtime_error("unhandled interconnect load16 address..." + std::to_string(physicalAddress));
+		}
 	}
 
 	uint32_t Interconnect::load32(uint32_t address) const
 	{
-		checkIf32BitAligned(address);
+		checkIfAlignedBy<ALIGNED_FOR_32_BITS>(address);
 
 		uint32_t physicalAddress = maskRegion(address);
 
@@ -53,19 +65,30 @@ namespace ePugStation
 		throw std::runtime_error("unhandled interconnect load address..." + std::to_string(physicalAddress));
 	}
 
-	void Interconnect::store8(uint32_t address, uint32_t value)
+	void Interconnect::store8(uint32_t address, uint8_t value)
 	{
 		throw std::runtime_error("TODO");
 	}
 
-	void Interconnect::store16(uint32_t address, uint32_t value)
+	void Interconnect::store16(uint32_t address, uint16_t value)
 	{
-		throw std::runtime_error("TODO");
+		checkIfAlignedBy<ALIGNED_FOR_16_BITS>(address);
+
+		uint32_t physicalAddress = maskRegion(address);
+
+		if (SPU_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled SPU store16, ignoring...\n";
+		}
+		else
+		{
+			throw std::runtime_error("unhandled interconnect stor16 address..." + std::to_string(physicalAddress));
+		}
 	}
 
 	void Interconnect::store32(uint32_t address, uint32_t value)
 	{
-		checkIf32BitAligned(address);
+		checkIfAlignedBy<ALIGNED_FOR_32_BITS>(address);
 
 		uint32_t physicalAddress = maskRegion(address);
 
@@ -100,6 +123,11 @@ namespace ePugStation
 		else if (CACHE_CONTROL_RANGE.contains(physicalAddress))
 		{
 			std::cout << "Unhandled CACHE_CONTROL store, ignoring...\n";
+		}
+		else if (physicalAddress == 0xfffffefc)
+		{
+			// TBD where this address is taken from...
+			std::cout << "Unhandled instruction 0xfffffefc, ignoring for now...\n";
 		}
 		else
 		{

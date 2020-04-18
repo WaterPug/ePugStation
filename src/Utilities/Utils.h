@@ -7,9 +7,10 @@
 
 namespace ePugStation
 {
-	void checkIf32BitAligned(uint32_t address)
+	template<uint32_t BYTE_COUNT>
+	void checkIfAlignedBy(uint32_t address)
 	{
-		if (address % 4 != 0)
+		if (address % BYTE_COUNT != 0)
 		{
 			throw std::runtime_error("address not aligned with address : " + std::to_string(address));
 		}
