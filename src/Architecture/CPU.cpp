@@ -12,6 +12,7 @@ namespace ePugStation
 		m_nextInstruction.op = 0x0;
 
 		m_registers.fill(0xdeadbeef);
+		m_outputRegisters.fill(0xdeadbeef);
 		m_registers[0] = 0; // Constant R0
 	}
 
@@ -302,14 +303,6 @@ namespace ePugStation
 		// Do nothing...
 	}
 
-	void CPU::opBNE(Instruction instruction)
-	{
-		if (m_registers[instruction.s] != m_registers[instruction.t])
-		{
-			branch(instruction.imm);
-		}
-	}
-
 	void CPU::opDIV(Instruction instruction)
 	{
 		throw std::runtime_error("NOT IMPLEMENTED");
@@ -327,7 +320,9 @@ namespace ePugStation
 
 	void CPU::opORI(Instruction instruction)
 	{
-		setReg(instruction.t, m_registers[instruction.s] | instruction.imm);
+		// TODO: Understand why imm is 32bit instead of 16 !!
+		// Might be worth to make functions with types for now to be less error prone...
+		setReg(instruction.t, m_registers[instruction.s] | (0x0000ffff & instruction.imm));
 	}
 
 	void CPU::opJ(Instruction instruction)
@@ -337,12 +332,13 @@ namespace ePugStation
 
 	void CPU::opJAL(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		setReg(31, m_ip);
+		opJ(instruction);
 	}
 
 	void CPU::opJR(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		m_ip = m_registers[instruction.s];
 	}
 
 	void CPU::opADDU(Instruction instruction)
@@ -357,12 +353,23 @@ namespace ePugStation
 
 	void CPU::opANDI(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		setReg(instruction.t, instruction.s & instruction.imm);
+	}
+
+	void CPU::opBNE(Instruction instruction)
+	{
+		if (m_registers[instruction.s] != m_registers[instruction.t])
+		{
+			branch(instruction.imm);
+		}
 	}
 
 	void CPU::opBEQ(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		if (m_registers[instruction.s] == m_registers[instruction.t])
+		{
+			branch(instruction.imm);
+		}
 	}
 
 	void CPU::opBGEZ(Instruction instruction)
@@ -410,7 +417,7 @@ namespace ePugStation
 		uint32_t result = 0;
 		if (!safeAdd(m_registers[instruction.s], instruction.imm, result))
 		{
-			// TODO: Exception handling here
+			throw std::runtime_error("NOT IMPLEMENTED");
 		}
 		else
 		{
@@ -426,17 +433,6 @@ namespace ePugStation
 	void CPU::opSLLV(Instruction instruction)
 	{
 		throw std::runtime_error("NOT IMPLEMENTED");
-	}
-
-	void CPU::opLW(Instruction instruction)
-	{
-		if ((m_sr & 0x10000) != 0)
-		{
-			std::cout << "Ignoring load while cache is isolated...\n";
-			return;
-		}
-		uint32_t address = m_registers[instruction.s] + instruction.imm;
-		m_loadPair = { instruction.t, load32(address) };
 	}
 
 	void CPU::opMFHI(Instruction instruction)
@@ -472,7 +468,13 @@ namespace ePugStation
 
 	void CPU::opSB(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		if ((m_sr & 0x10000) != 0)
+		{
+			std::cout << "Ignoring store while cache is isolated...\n";
+			return;
+		}
+		uint32_t address = m_registers[instruction.s] + instruction.imm;
+		store8(address, 0xff & instruction.t);
 	}
 
 	void CPU::opSW(Instruction instruction)
@@ -486,9 +488,26 @@ namespace ePugStation
 		store32(address, m_registers[instruction.t]);
 	}
 
+	void CPU::opLW(Instruction instruction)
+	{
+		if ((m_sr & 0x10000) != 0)
+		{
+			std::cout << "Ignoring load while cache is isolated...\n";
+			return;
+		}
+		uint32_t address = m_registers[instruction.s] + instruction.imm;
+		m_loadPair = { instruction.t, load32(address) };
+	}
+
 	void CPU::opLB(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		if ((m_sr & 0x10000) != 0)
+		{
+			std::cout << "Ignoring load while cache is isolated...\n";
+			return;
+		}
+		uint32_t address = m_registers[instruction.s] + instruction.imm;
+		m_loadPair = { instruction.t, load8(address) };
 	}
 
 	void CPU::opLH(Instruction instruction)

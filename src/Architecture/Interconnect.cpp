@@ -27,7 +27,16 @@ namespace ePugStation
 {
 	uint8_t Interconnect::load8(uint32_t address) const
 	{
-		throw std::runtime_error("TODO");
+		uint32_t physicalAddress = maskRegion(address);
+
+		if (BIOS_RANGE_PHYSICAL.contains(physicalAddress))
+		{
+			return m_bios.load8(BIOS_RANGE_PHYSICAL.offset(physicalAddress));
+		}
+		else
+		{
+			throw std::runtime_error("unhandled interconnect load8 address..." + std::to_string(physicalAddress));
+		}
 	}
 
 	uint16_t Interconnect::load16(uint32_t address) const
@@ -67,7 +76,16 @@ namespace ePugStation
 
 	void Interconnect::store8(uint32_t address, uint8_t value)
 	{
-		throw std::runtime_error("TODO");
+		uint32_t physicalAddress = maskRegion(address);
+
+		if (EXPANSION_2_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled EXPANSION 2 store8, ignoring...\n";
+		}
+		else
+		{
+			throw std::runtime_error("unhandled interconnect stor16 address..." + std::to_string(physicalAddress));
+		}
 	}
 
 	void Interconnect::store16(uint32_t address, uint16_t value)
@@ -123,11 +141,6 @@ namespace ePugStation
 		else if (CACHE_CONTROL_RANGE.contains(physicalAddress))
 		{
 			std::cout << "Unhandled CACHE_CONTROL store, ignoring...\n";
-		}
-		else if (physicalAddress == 0xfffffefc)
-		{
-			// TBD where this address is taken from...
-			std::cout << "Unhandled instruction 0xfffffefc, ignoring for now...\n";
 		}
 		else
 		{

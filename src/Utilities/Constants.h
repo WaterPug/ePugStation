@@ -10,7 +10,7 @@ namespace ePugStation
 	// BIOS related
 	constexpr uint32_t BIOS_ROM_LOGICAL = 0xbfc00000;
 	constexpr uint32_t BIOS_ROM_PHYSICAL = 0x1fc00000;
-	constexpr char PATH_TO_BIOS[] = "D:\\GitRepo\\ePugStation\\ePugStation\\data\\SCPH1001.BIN";
+	constexpr char PATH_TO_BIOS[] = "D:\\GitRepo\\ePugStation\\data\\SCPH1001.BIN";
 	constexpr size_t BIOS_MEMORY_SIZE = 514 * 1024;
 	constexpr Range<BIOS_ROM_PHYSICAL, BIOS_MEMORY_SIZE> BIOS_RANGE_PHYSICAL;
 
@@ -45,6 +45,10 @@ namespace ePugStation
 	constexpr uint32_t SPU_SIZE = 0xE80 - 0xC00;
 	constexpr Range<SPU_START, SPU_SIZE> SPU_RANGE;
 
+	// Expansion 2
+	constexpr uint32_t EXPANSION_2_START = 0x1f802000;
+	constexpr uint32_t EXPANSION_2_SIZE = 66;
+	constexpr Range<EXPANSION_2_START, EXPANSION_2_SIZE> EXPANSION_2_RANGE;
 
 	// General uses
 	constexpr uint32_t ALIGNED_FOR_32_BITS = 4;
