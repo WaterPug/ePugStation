@@ -15,8 +15,6 @@ namespace ePugStation
 	constexpr Range<BIOS_ROM_PHYSICAL, BIOS_MEMORY_SIZE> BIOS_RANGE_PHYSICAL;
 
 	// Mem control
-	constexpr uint32_t EXPANSION_1_BASE = 0x1f000000;
-	constexpr uint32_t EXPANSION_2_BASE = 0x1f802000;
 	constexpr uint32_t MEM_CONTROL_START = 0x1f801000;
 	constexpr uint32_t MEM_CONTROL_SIZE = 36;
 	constexpr Range<MEM_CONTROL_START, MEM_CONTROL_SIZE> MEM_CONTROL_RANGE;
@@ -44,6 +42,11 @@ namespace ePugStation
 	constexpr uint32_t SPU_START = 0x1f801c00;
 	constexpr uint32_t SPU_SIZE = 0xE80 - 0xC00;
 	constexpr Range<SPU_START, SPU_SIZE> SPU_RANGE;
+
+	// Expansion 1
+	constexpr uint32_t EXPANSION_1_START = 0x1f000000;
+	constexpr uint32_t EXPANSION_1_SIZE = 1024 * 1024; // TODO: Confirm this size
+	constexpr Range<EXPANSION_1_START, EXPANSION_1_SIZE> EXPANSION_1_RANGE;
 
 	// Expansion 2
 	constexpr uint32_t EXPANSION_2_START = 0x1f802000;

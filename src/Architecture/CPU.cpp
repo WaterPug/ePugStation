@@ -95,6 +95,7 @@ namespace ePugStation
 			// Load
 		case 0b001111: opLUI(instruction); break;
 		case 0b100000: opLB(instruction); break;
+		case 0b100100: opLBU(instruction); break;
 		case 0b100001: opLH(instruction); break;
 		case 0b100011: opLW(instruction); break;
 
@@ -245,17 +246,7 @@ namespace ePugStation
 
 	void CPU::opSLT(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
-	}
-
-	void CPU::opSLTI(Instruction instruction)
-	{
-		throw std::runtime_error("NOT IMPLEMENTED");
-	}
-
-	void CPU::opSLTIU(Instruction instruction)
-	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		setReg(instruction.SubOperation.d, m_registers[instruction.s] < m_registers[instruction.t]);
 	}
 
 	void CPU::opSLTU(Instruction instruction)
@@ -263,39 +254,57 @@ namespace ePugStation
 		setReg(instruction.SubOperation.d, m_registers[instruction.s] < m_registers[instruction.t]);
 	}
 
+	void CPU::opSLTI(Instruction instruction)
+	{
+		setReg(instruction.t, m_registers[instruction.s] < instruction.imm);
+	}
+
+	void CPU::opSLTIU(Instruction instruction)
+	{
+		setReg(instruction.t, m_registers[instruction.s] < instruction.imm);
+	}
+
 	void CPU::opSRA(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		// For arithmetic shift : Signed integer
+		int32_t signedValue = static_cast<int32_t>(m_registers[instruction.t]);
+
+		int32_t test = -10; // TODO: Remove this
+		test >> 10;
+
+		// Here need to keep signed bit
+		setReg(instruction.SubOperation.d, signedValue >> instruction.SubOperation.h);
 	}
 
 	void CPU::opSRL(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		// For logical shift : Unsigned integer
+		setReg(instruction.SubOperation.d, m_registers[instruction.t] >> instruction.SubOperation.h);
 	}
 
 	void CPU::opSRLV(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		setReg(instruction.SubOperation.d, m_registers[instruction.t] >> m_registers[instruction.s]);
 	}
 
 	void CPU::opSUB(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		setReg(instruction.SubOperation.d, m_registers[instruction.s] - m_registers[instruction.t]);
 	}
 
 	void CPU::opSUBU(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		setReg(instruction.SubOperation.d, m_registers[instruction.s] - m_registers[instruction.t]);
 	}
 
 	void CPU::opXOR(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		setReg(instruction.SubOperation.d, m_registers[instruction.s] ^ m_registers[instruction.t]);
 	}
 
 	void CPU::opXORI(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		setReg(instruction.t, m_registers[instruction.s] ^ m_registers[instruction.imm]);
 	}
 
 	void CPU::opSYSCALL(Instruction instruction)
@@ -348,12 +357,12 @@ namespace ePugStation
 
 	void CPU::opAND(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		setReg(instruction.SubOperation.d, m_registers[instruction.s] & m_registers[instruction.t]);
 	}
 
 	void CPU::opANDI(Instruction instruction)
 	{
-		setReg(instruction.t, instruction.s & instruction.imm);
+		setReg(instruction.t, m_registers[instruction.s] & instruction.imm);
 	}
 
 	void CPU::opBNE(Instruction instruction)
@@ -374,32 +383,52 @@ namespace ePugStation
 
 	void CPU::opBGEZ(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		if (m_registers[instruction.s] >= 0)
+		{
+			branch(instruction.imm);
+		}
 	}
 
 	void CPU::opBGEZAL(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		if (m_registers[instruction.s] >= 0)
+		{
+			setReg(31, m_ip);
+			branch(instruction.imm);
+		}
 	}
 
 	void CPU::opBGTZ(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		if (m_registers[instruction.s] > 0)
+		{
+			branch(instruction.imm);
+		}
 	}
 
 	void CPU::opBLEZ(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		if (m_registers[instruction.s] <= 0)
+		{
+			branch(instruction.imm);
+		}
 	}
 
 	void CPU::opBLTZ(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		if (m_registers[instruction.s] < 0)
+		{
+			branch(instruction.imm);
+		}
 	}
 
 	void CPU::opBLTZAL(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		if (m_registers[instruction.s] < 0)
+		{
+			setReg(31, m_ip);
+			branch(instruction.imm);
+		}
 	}
 
 	void CPU::opADDIU(Instruction instruction)
@@ -409,7 +438,7 @@ namespace ePugStation
 
 	void CPU::opADD(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		setReg(instruction.SubOperation.d, m_registers[instruction.s] + m_registers[instruction.t]);
 	}
 
 	void CPU::opADDI(Instruction instruction)
@@ -432,7 +461,7 @@ namespace ePugStation
 
 	void CPU::opSLLV(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		setReg(instruction.SubOperation.d, m_registers[instruction.t] << m_registers[instruction.s]);
 	}
 
 	void CPU::opMFHI(Instruction instruction)
@@ -507,12 +536,32 @@ namespace ePugStation
 			return;
 		}
 		uint32_t address = m_registers[instruction.s] + instruction.imm;
+		int8_t loadValue = load8(address);
+		m_loadPair = { instruction.t, static_cast<uint32_t>(loadValue) };
+	}
+
+	void CPU::opLBU(Instruction instruction)
+	{
+		// TBD if this is correct
+		if ((m_sr & 0x10000) != 0)
+		{
+			std::cout << "Ignoring load while cache is isolated...\n";
+			return;
+		}
+		uint32_t address = m_registers[instruction.s] + instruction.imm;
 		m_loadPair = { instruction.t, load8(address) };
 	}
 
 	void CPU::opLH(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		// TBD if this is correct
+		if ((m_sr & 0x10000) != 0)
+		{
+			std::cout << "Ignoring load while cache is isolated...\n";
+			return;
+		}
+		uint32_t address = m_registers[instruction.s] + instruction.imm;
+		m_loadPair = { instruction.t, load16(address) };
 	}
 
 	void CPU::opLUI(Instruction instruction)

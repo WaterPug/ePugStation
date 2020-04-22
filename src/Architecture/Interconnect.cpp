@@ -33,6 +33,20 @@ namespace ePugStation
 		{
 			return m_bios.load8(BIOS_RANGE_PHYSICAL.offset(physicalAddress));
 		}
+		else if (EXPANSION_1_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled EXPANSION 1 load8, returning 0xFF...\n";
+			return 0xFF;
+		}
+		else if (EXPANSION_2_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled EXPANSION 2 load8, returning 0xFF...\n";
+			return 0xFF;
+		}
+		else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
+		{
+			return m_ram.load8(RAM_RANGE_PHYSICAL.offset(physicalAddress));
+		}
 		else
 		{
 			throw std::runtime_error("unhandled interconnect load8 address..." + std::to_string(physicalAddress));
@@ -82,6 +96,10 @@ namespace ePugStation
 		{
 			std::cout << "Unhandled EXPANSION 2 store8, ignoring...\n";
 		}
+		else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
+		{
+			m_ram.store8(RAM_RANGE_PHYSICAL.offset(physicalAddress), value);
+		}
 		else
 		{
 			throw std::runtime_error("unhandled interconnect stor16 address..." + std::to_string(physicalAddress));
@@ -121,11 +139,11 @@ namespace ePugStation
 		else if (MEM_CONTROL_RANGE.contains(physicalAddress))
 		{
 			uint32_t offset = MEM_CONTROL_RANGE.offset(physicalAddress);
-			if (offset == 0 && value != EXPANSION_1_BASE)
+			if (offset == 0 && value != EXPANSION_1_START)
 			{
 				throw std::runtime_error("Expecting expansion 1 base address, got : " + std::to_string(physicalAddress));
 			}
-			else if (offset == 4 && value != EXPANSION_2_BASE)
+			else if (offset == 4 && value != EXPANSION_2_START)
 			{
 				throw std::runtime_error("Expecting expansion 2 base address, got : " + std::to_string(physicalAddress));
 			}

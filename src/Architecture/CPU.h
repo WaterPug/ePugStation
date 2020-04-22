@@ -75,6 +75,7 @@ namespace ePugStation
 
 		// Loads
 		void opLB(Instruction instruction);
+		void opLBU(Instruction instruction);
 		void opLH(Instruction instruction);
 		void opLUI(Instruction instruction);
 		void opLW(Instruction instruction);
