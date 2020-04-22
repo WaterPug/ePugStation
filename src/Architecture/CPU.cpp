@@ -21,6 +21,12 @@ namespace ePugStation
 		Instruction currentInstruction(m_nextInstruction);
 		m_nextInstruction = Instruction(load32(m_ip));
 		// Point IP to next instruction
+
+		if (m_registers[4] == (0x80200000 - 0x1))
+		{
+			std::cout << "m_ip : " + std::to_string(m_ip) + "\n";
+		}
+
 		std::cout << "m_ip : " + std::to_string(m_ip) + "\n";
 		m_ip += 4;
 		setReg(m_loadPair);
@@ -154,6 +160,7 @@ namespace ePugStation
 
 			// Jump
 		case 0b001000: opJR(instruction); break;
+		case 0b001001: opJALR(instruction); break;
 
 			// Move
 		case 0b010000: opMFHI(instruction); break;
@@ -211,36 +218,72 @@ namespace ePugStation
 
 	void CPU::opCop0(Instruction instruction)
 	{
-		auto regValue = m_registers[instruction.t];
 		switch (instruction.s)
 		{
+		case 0b00000:
+			opMFC(instruction);
+			break;
 		case 0b00100:
-			// To be used when Cop0 registers are implemented
-			//auto copRegIndex = instruction.SubOperation.d;
-			switch (instruction.SubOperation.d)
-			{
-			case 3:
-			case 5:
-			case 6:
-			case 7:
-			case 9:
-			case 11:
-				if (regValue != 0)
-					throw std::runtime_error("Unhandled write to cop0r");
-				break;
-			case 12:
-				m_sr = regValue;
-				break;
-			case 13:
-				if (regValue != 0)
-					throw std::runtime_error("Unhandled write to CAUSE register!");
-				break;
-			default:
-				throw std::runtime_error("Unhandled cop Reg value...");
-			}
+			opMTC(instruction);
 			break;
 		default:
-			throw std::runtime_error("Unhandled cop0 instruction...");
+			throw std::runtime_error("Unhandled COP0 opcode...");
+		}
+	}
+
+	void CPU::opMFC(Instruction instruction)
+	{
+		auto regValue = m_registers[instruction.t];
+
+		switch (instruction.SubOperation.d)
+		{
+		case 3:
+		case 5:
+		case 6:
+		case 7:
+		case 9:
+		case 11:
+			if (regValue != 0)
+				throw std::runtime_error("Unhandled write to cop0r");
+			break;
+		case 12:
+			m_sr = regValue;
+			break;
+		case 13:
+			if (regValue != 0)
+				throw std::runtime_error("Unhandled write to CAUSE register!");
+			break;
+		default:
+			throw std::runtime_error("Unhandled COP0 MFC index value...");
+		}
+	}
+
+	void CPU::opMTC(Instruction instruction)
+	{
+		auto regValue = m_registers[instruction.t];
+
+		// To be used when Cop0 registers are implemented
+		// auto copRegIndex = instruction.SubOperation.d;
+		switch (instruction.SubOperation.d)
+		{
+		case 3:
+		case 5:
+		case 6:
+		case 7:
+		case 9:
+		case 11:
+			if (regValue != 0)
+				throw std::runtime_error("Unhandled write to cop0r");
+			break;
+		case 12:
+			m_sr = regValue;
+			break;
+		case 13:
+			if (regValue != 0)
+				throw std::runtime_error("Unhandled write to CAUSE register!");
+			break;
+		default:
+			throw std::runtime_error("Unhandled COP0 MTC index value...");
 		}
 	}
 
@@ -256,7 +299,7 @@ namespace ePugStation
 
 	void CPU::opSLTI(Instruction instruction)
 	{
-		setReg(instruction.t, m_registers[instruction.s] < instruction.imm);
+		setReg(instruction.t, static_cast<int32_t>(m_registers[instruction.s]) < instruction.imm);
 	}
 
 	void CPU::opSLTIU(Instruction instruction)
@@ -350,6 +393,12 @@ namespace ePugStation
 		m_ip = m_registers[instruction.s];
 	}
 
+	void CPU::opJALR(Instruction instruction)
+	{
+		setReg(instruction.SubOperation.d, m_ip);
+		m_ip = m_registers[instruction.s];
+	}
+
 	void CPU::opADDU(Instruction instruction)
 	{
 		setReg(instruction.SubOperation.d, m_registers[instruction.s] + m_registers[instruction.t]);
@@ -383,7 +432,7 @@ namespace ePugStation
 
 	void CPU::opBGEZ(Instruction instruction)
 	{
-		if (m_registers[instruction.s] >= 0)
+		if (static_cast<int32_t>(m_registers[instruction.s]) >= 0)
 		{
 			branch(instruction.imm);
 		}
@@ -391,7 +440,7 @@ namespace ePugStation
 
 	void CPU::opBGEZAL(Instruction instruction)
 	{
-		if (m_registers[instruction.s] >= 0)
+		if (static_cast<int32_t>(m_registers[instruction.s]) >= 0)
 		{
 			setReg(31, m_ip);
 			branch(instruction.imm);
@@ -400,7 +449,7 @@ namespace ePugStation
 
 	void CPU::opBGTZ(Instruction instruction)
 	{
-		if (m_registers[instruction.s] > 0)
+		if (static_cast<int32_t>(m_registers[instruction.s]) > 0)
 		{
 			branch(instruction.imm);
 		}
@@ -408,7 +457,7 @@ namespace ePugStation
 
 	void CPU::opBLEZ(Instruction instruction)
 	{
-		if (m_registers[instruction.s] <= 0)
+		if (static_cast<int32_t>(m_registers[instruction.s]) <= 0)
 		{
 			branch(instruction.imm);
 		}
@@ -416,7 +465,7 @@ namespace ePugStation
 
 	void CPU::opBLTZ(Instruction instruction)
 	{
-		if (m_registers[instruction.s] < 0)
+		if (static_cast<int32_t>(m_registers[instruction.s]) < 0)
 		{
 			branch(instruction.imm);
 		}
@@ -424,7 +473,7 @@ namespace ePugStation
 
 	void CPU::opBLTZAL(Instruction instruction)
 	{
-		if (m_registers[instruction.s] < 0)
+		if (static_cast<int32_t>(m_registers[instruction.s]) < 0)
 		{
 			setReg(31, m_ip);
 			branch(instruction.imm);
@@ -438,7 +487,15 @@ namespace ePugStation
 
 	void CPU::opADD(Instruction instruction)
 	{
-		setReg(instruction.SubOperation.d, m_registers[instruction.s] + m_registers[instruction.t]);
+		uint32_t result = 0;
+		if (!safeAdd(m_registers[instruction.s], instruction.imm, result))
+		{
+			throw std::runtime_error("NOT IMPLEMENTED");
+		}
+		else
+		{
+			setReg(instruction.SubOperation.d, m_registers[instruction.s] + m_registers[instruction.t]);
+		}
 	}
 
 	void CPU::opADDI(Instruction instruction)
@@ -503,7 +560,7 @@ namespace ePugStation
 			return;
 		}
 		uint32_t address = m_registers[instruction.s] + instruction.imm;
-		store8(address, 0xff & instruction.t);
+		store8(address, 0xff & m_registers[instruction.t]);
 	}
 
 	void CPU::opSW(Instruction instruction)

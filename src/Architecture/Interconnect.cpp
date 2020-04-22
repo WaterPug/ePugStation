@@ -160,6 +160,10 @@ namespace ePugStation
 		{
 			std::cout << "Unhandled CACHE_CONTROL store, ignoring...\n";
 		}
+		else if (INTERRUPT_CONTROL_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled INTERRUPT_CONTROL store, ignoring...\n";
+		}
 		else
 		{
 			throw std::runtime_error("Unhandled store..." + std::to_string(physicalAddress));

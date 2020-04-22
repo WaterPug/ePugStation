@@ -72,6 +72,7 @@ namespace ePugStation
 		void opJ(Instruction instruction);
 		void opJAL(Instruction instruction);
 		void opJR(Instruction instruction);
+		void opJALR(Instruction instruction);
 
 		// Loads
 		void opLB(Instruction instruction);
@@ -125,6 +126,8 @@ namespace ePugStation
 
 		// Coprocessor operations
 		void opCop0(Instruction instruction);
+		void opMFC(Instruction instruction);
+		void opMTC(Instruction instruction);
 	};
 }
 #endif

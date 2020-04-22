@@ -53,6 +53,12 @@ namespace ePugStation
 	constexpr uint32_t EXPANSION_2_SIZE = 66;
 	constexpr Range<EXPANSION_2_START, EXPANSION_2_SIZE> EXPANSION_2_RANGE;
 
+	// Interrupt control
+	constexpr uint32_t INTERRUPT_CONTROL_START = 0x1f801070;
+	constexpr uint32_t INTERRUPT_CONTROL_SIZE = 8;
+	constexpr Range<INTERRUPT_CONTROL_START, INTERRUPT_CONTROL_SIZE> INTERRUPT_CONTROL_RANGE;
+
+
 	// General uses
 	constexpr uint32_t ALIGNED_FOR_32_BITS = 4;
 	constexpr uint32_t ALIGNED_FOR_16_BITS = 2;
