@@ -58,6 +58,10 @@ namespace ePugStation
 	constexpr uint32_t INTERRUPT_CONTROL_SIZE = 8;
 	constexpr Range<INTERRUPT_CONTROL_START, INTERRUPT_CONTROL_SIZE> INTERRUPT_CONTROL_RANGE;
 
+	// Timers
+	constexpr uint32_t TIMERS_START = 0x1f801100;
+	constexpr uint32_t TIMERS_SIZE = 48; // TBD if this is valid
+	constexpr Range<TIMERS_START, TIMERS_SIZE> TIMERS_RANGE;
 
 	// General uses
 	constexpr uint32_t ALIGNED_FOR_32_BITS = 4;

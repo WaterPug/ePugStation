@@ -84,6 +84,11 @@ namespace ePugStation
 		{
 			return m_ram.load32(RAM_RANGE_PHYSICAL.offset(physicalAddress));
 		}
+		else if (INTERRUPT_CONTROL_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled INTERRUPT CONTROL load32, ignoring...\n";
+			return 0;
+		}
 
 		throw std::runtime_error("unhandled interconnect load address..." + std::to_string(physicalAddress));
 	}
@@ -115,6 +120,10 @@ namespace ePugStation
 		if (SPU_RANGE.contains(physicalAddress))
 		{
 			std::cout << "Unhandled SPU store16, ignoring...\n";
+		}
+		else if (TIMERS_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled TIMERS store16, ignoring...\n";
 		}
 		else
 		{

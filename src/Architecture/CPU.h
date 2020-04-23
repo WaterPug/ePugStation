@@ -26,6 +26,9 @@ namespace ePugStation
 
 	private:
 		uint32_t m_ip;
+		uint32_t m_HI;
+		uint32_t m_LO;
+
 		Instruction m_nextInstruction;
 		std::array<uint32_t, CPU_REGISTERS> m_registers;
 		std::array<uint32_t, CPU_REGISTERS> m_outputRegisters;

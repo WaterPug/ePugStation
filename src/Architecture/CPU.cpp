@@ -7,7 +7,9 @@ namespace ePugStation
 	CPU::CPU() :
 		m_ip(BIOS_ROM_LOGICAL),
 		m_sr(0),
-		m_loadPair({ 0, 0 })
+		m_loadPair({ 0, 0 }),
+		m_HI(0xdeadbeaf),
+		m_LO(0xdeadbeaf)
 	{
 		m_nextInstruction.op = 0x0;
 
@@ -289,7 +291,10 @@ namespace ePugStation
 
 	void CPU::opSLT(Instruction instruction)
 	{
-		setReg(instruction.SubOperation.d, m_registers[instruction.s] < m_registers[instruction.t]);
+		auto s = static_cast<int32_t>(m_registers[instruction.s]);
+		auto t = static_cast<int32_t>(m_registers[instruction.t]);
+
+		setReg(instruction.SubOperation.d, s < t);
 	}
 
 	void CPU::opSLTU(Instruction instruction)
@@ -311,9 +316,6 @@ namespace ePugStation
 	{
 		// For arithmetic shift : Signed integer
 		int32_t signedValue = static_cast<int32_t>(m_registers[instruction.t]);
-
-		int32_t test = -10; // TODO: Remove this
-		test >> 10;
 
 		// Here need to keep signed bit
 		setReg(instruction.SubOperation.d, signedValue >> instruction.SubOperation.h);
@@ -357,12 +359,50 @@ namespace ePugStation
 
 	void CPU::opDIV(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		int32_t numerator = static_cast<int32_t>(m_registers[instruction.s]);
+		int32_t denominator = static_cast<int32_t>(m_registers[instruction.t]);
+
+		if (denominator == 0) // Div by 0
+		{
+			m_HI = numerator;
+			if (numerator >= 0)
+			{
+				m_LO = 0xFFFFFFFF;
+			}
+			else
+			{
+				m_LO = 0x1;
+			}
+		}
+		else if (static_cast<uint32_t>(numerator) == 0x80000000 && denominator == -1)
+		{
+			m_LO = 0x80000000;
+			m_HI = 0;
+		}
+		else
+		{
+			// Normal case
+			m_LO = static_cast<uint32_t>(numerator / denominator);
+			m_HI = static_cast<uint32_t>(numerator % denominator);
+		}
 	}
 
 	void CPU::opDIVU(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		uint32_t numerator = m_registers[instruction.s];
+		uint32_t denominator = m_registers[instruction.t];
+
+		if (denominator == 0) // Div by 0
+		{
+			m_HI = numerator;
+			m_LO = 0xFFFFFFFF;
+		}
+		else
+		{
+			// Normal case
+			m_LO = numerator / denominator;
+			m_HI = numerator % denominator;
+		}
 	}
 
 	void CPU::opOR(Instruction instruction)
@@ -523,22 +563,24 @@ namespace ePugStation
 
 	void CPU::opMFHI(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		setReg(instruction.SubOperation.d, m_HI);
 	}
 
 	void CPU::opMFLO(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		setReg(instruction.SubOperation.d, m_LO);
 	}
 
 	void CPU::opMULT(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		auto s = static_cast<int32_t>(m_registers[instruction.s]);
+		auto t = static_cast<int32_t>(m_registers[instruction.t]);
+		m_LO = s * t;
 	}
 
 	void CPU::opMULTU(Instruction instruction)
 	{
-		throw std::runtime_error("NOT IMPLEMENTED");
+		m_LO = m_registers[instruction.s] * m_registers[instruction.t];
 	}
 
 	void CPU::opSH(Instruction instruction)
