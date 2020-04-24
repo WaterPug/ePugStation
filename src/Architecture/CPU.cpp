@@ -6,13 +6,17 @@ namespace ePugStation
 {
 	CPU::CPU() :
 		m_ip(BIOS_ROM_LOGICAL),
-		m_sr(0),
 		m_loadPair({ 0, 0 }),
 		m_HI(0xdeadbeaf),
 		m_LO(0xdeadbeaf)
 	{
-		m_nextInstruction.op = 0x0;
+		// Make constructor for cop0
+		m_cop0.sr = 0;
+		m_cop0.cause = 0;
+		m_cop0.epc = 0;
 
+		m_nextIp = m_ip + 4;
+		
 		m_registers.fill(0xdeadbeef);
 		m_outputRegisters.fill(0xdeadbeef);
 		m_registers[0] = 0; // Constant R0
@@ -20,20 +24,15 @@ namespace ePugStation
 
 	void CPU::runNextInstruction()
 	{
-		Instruction currentInstruction(m_nextInstruction);
-		m_nextInstruction = Instruction(load32(m_ip));
+		m_currentInstruction = Instruction(load32(m_ip));
+		m_currentIp = m_ip;
+		m_ip = m_nextIp;
+		std::cout << "m_ip : " + std::to_string(m_currentIp) + "\n";
 		// Point IP to next instruction
-
-		if (m_registers[4] == (0x80200000 - 0x1))
-		{
-			std::cout << "m_ip : " + std::to_string(m_ip) + "\n";
-		}
-
-		std::cout << "m_ip : " + std::to_string(m_ip) + "\n";
-		m_ip += 4;
+		m_nextIp += 4;
 		setReg(m_loadPair);
 		m_loadPair = { 0,0 };
-		decodeAndExecute(currentInstruction.op);
+		decodeAndExecuteCurrentOp();
 		m_registers = m_outputRegisters;
 	}
 
@@ -67,133 +66,128 @@ namespace ePugStation
 		m_interconnect.store32(address, value);
 	}
 
-	void CPU::decodeAndExecute(uint32_t instruction)
+	void CPU::decodeAndExecuteCurrentOp()
 	{
-		Instruction formatedInstruction;
-		formatedInstruction.op = instruction;
-
-		matchOp(formatedInstruction);
-	}
-
-	void CPU::matchOp(Instruction instruction)
-	{
-		switch (instruction.function)
+		switch (m_currentInstruction.function)
 		{
 			// Sub Op
-		case 0b000000: matchSubOp(instruction); break;
+		case 0b000000: matchSubOp(); break;
+		case 0b000001: matchSubBranchOp(); break;
 
 			// Jump
-		case 0b000010: opJ(instruction); break;
-		case 0b000011: opJAL(instruction); break;
-
-			// Add
-		case 0b001000: opADDI(instruction); break;
-		case 0b001001: opADDIU(instruction); break;
-
-			// And
-		case 0b001100: opANDI(instruction); break;
+		case 0b000010: opJ(); break;
+		case 0b000011: opJAL(); break;
 
 			// Branch
-		case 0b000100: opBEQ(instruction); break;
-		case 0b000101: opBNE(instruction); break;
-		case 0b000001: matchSubBranchOp(instruction); break;
-		case 0b000111: opBGTZ(instruction); break;
-		case 0b000110: opBLEZ(instruction); break;
+		case 0b000100: opBEQ(); break;
+		case 0b000101: opBNE(); break;
+		case 0b000110: opBLEZ(); break;
+		case 0b000111: opBGTZ(); break;
 
-			// Load
-		case 0b001111: opLUI(instruction); break;
-		case 0b100000: opLB(instruction); break;
-		case 0b100100: opLBU(instruction); break;
-		case 0b100001: opLH(instruction); break;
-		case 0b100011: opLW(instruction); break;
-
-			// OR
-		case 0b001101: opORI(instruction); break;
-
-			// Store
-		case 0b101000: opSB(instruction); break;
-		case 0b101001: opSH(instruction); break;
-		case 0b101011: opSW(instruction); break;
+			// Add
+		case 0b001000: opADDI(); break;
+		case 0b001001: opADDIU(); break;
 
 			// Set
-		case 0b001010: opSLTI(instruction); break;
-		case 0b001011: opSLTIU(instruction); break;
-
-			// XOR
-		case 0b001110: opXORI(instruction); break;
-
-			// Cop
-		case 0b010000: opCop0(instruction); break;
-
-		default:
-			throw std::runtime_error("Instruction function not implemented with function : " + std::to_string(instruction.function));
-		}
-	}
-
-	void CPU::matchSubBranchOp(Instruction instruction)
-	{
-
-		switch (instruction.t)
-		{
-		case 0b00001: opBGEZ(instruction); break;
-		case 0b10001: opBGEZAL(instruction); break;
-		case 0b00000: opBLTZ(instruction); break;
-		case 0b10000: opBLTZAL(instruction); break;
-		default:
-			throw std::runtime_error("Unsupported t value at address : " + std::to_string(instruction.function));
-		}
-
-	}
-
-	void CPU::matchSubOp(Instruction instruction)
-	{
-		switch (instruction.SubOperation.sub)
-		{
-			// Add
-		case 0b100000: opADD(instruction); break;
-		case 0b100001: opADDU(instruction); break;
+		case 0b001010: opSLTI(); break;
+		case 0b001011: opSLTIU(); break;
 
 			// And
-		case 0b100100: opAND(instruction); break;
+		case 0b001100: opANDI(); break;
 
-			// Div
-		case 0b011010: opDIV(instruction); break;
-		case 0b011011: opDIVU(instruction); break;
-
-			// Jump
-		case 0b001000: opJR(instruction); break;
-		case 0b001001: opJALR(instruction); break;
-
-			// Move
-		case 0b010000: opMFHI(instruction); break;
-		case 0b010010: opMFLO(instruction); break;
-
-			// Mult
-		case 0b011000: opMULT(instruction); break;
-		case 0b011001: opMULTU(instruction); break;
-
-			// Or
-		case 0b100101: opOR(instruction); break;
-
-			// Shift Left
-		case 0b000000: opSLL(instruction);  break;
-		case 0b000100: opSLLV(instruction); break;
-
-			// Set
-		case 0b101010: opSLT(instruction); break;
-		case 0b101011: opSLTU(instruction);  break;
-
-			// Shift right
-		case 0b000011: opSRA(instruction);  break;
-		case 0b000010: opSRL(instruction);  break;
-		case 0b000110: opSRLV(instruction);  break;
-
-			// Sub
-		case 0b100010: opSUB(instruction); break;
-		case 0b100011: opSUBU(instruction); break;
+			// OR
+		case 0b001101: opORI(); break;
 
 			// XOR
-		case 0b100110: opXOR(instruction); break;
+		case 0b001110: opXORI(); break;
+
+			// Cop
+		case 0b010000: opCop0(); break;
+
+			// Load
+		case 0b001111: opLUI(); break;
+		case 0b100000: opLB(); break;
+		case 0b100100: opLBU(); break;
+		case 0b100001: opLH(); break;
+		case 0b100011: opLW(); break;
+
+			// Store
+		case 0b101000: opSB(); break;
+		case 0b101001: opSH(); break;
+		case 0b101011: opSW(); break;
+
+		default:
+			throw std::runtime_error("Instruction function not implemented with function : " + std::to_string(m_currentInstruction.function));
+		}
+	}
+
+	void CPU::matchSubBranchOp()
+	{
+		switch (m_currentInstruction.t)
+		{
+		case 0b00000: opBLTZ(); break;
+		case 0b00001: opBGEZ(); break;
+		case 0b10000: opBLTZAL(); break;
+		case 0b10001: opBGEZAL(); break;
+		default:
+			throw std::runtime_error("Unsupported t value at address : " + std::to_string(m_currentInstruction.function));
+		}
+	}
+
+	void CPU::matchSubOp()
+	{
+		switch (m_currentInstruction.SubOperation.sub)
+		{
+			// Shifts
+		case 0b000000: opSLL();  break;
+		case 0b000010: opSRL();  break;
+		case 0b000011: opSRA();  break;
+		case 0b000100: opSLLV(); break;
+		case 0b000110: opSRLV();  break;
+
+			// Jump
+		case 0b001000: opJR(); break;
+		case 0b001001: opJALR(); break;
+
+			// SYSCALL
+		case 0b001100: opSYSCALL(); break;
+
+			// Move
+		case 0b010000: opMFHI(); break;
+		case 0b010001: opMTHI(); break;
+		case 0b010010: opMFLO(); break;
+		case 0b010011: opMTLO(); break;
+
+
+
+			// Mult
+		case 0b011000: opMULT(); break;
+		case 0b011001: opMULTU(); break;
+
+			// Div
+		case 0b011010: opDIV(); break;
+		case 0b011011: opDIVU(); break;
+
+			// Add
+		case 0b100000: opADD(); break;
+		case 0b100001: opADDU(); break;
+
+			// Sub
+		case 0b100010: opSUB(); break;
+		case 0b100011: opSUBU(); break;
+
+			// And
+		case 0b100100: opAND(); break;
+
+			// Or
+		case 0b100101: opOR(); break;
+
+			// XOR
+		case 0b100110: opXOR(); break;
+
+			// Set
+		case 0b101010: opSLT(); break;
+		case 0b101011: opSLTU();  break;
 
 		default:
 			throw std::runtime_error("SubOperation not implemented...");
@@ -214,59 +208,62 @@ namespace ePugStation
 
 	void CPU::branch(uint32_t offset)
 	{
-		m_ip -= 4;
-		m_ip += (offset << 2);
+		m_nextIp -= 4;
+		m_nextIp += (offset << 2);
 	}
 
-	void CPU::opCop0(Instruction instruction)
+	void CPU::opCop0()
 	{
-		switch (instruction.s)
+		switch (m_currentInstruction.s)
 		{
 		case 0b00000:
-			opMFC(instruction);
+			opMFC();
 			break;
 		case 0b00100:
-			opMTC(instruction);
+			opMTC();
+			break;
+		case 0b10000:
+			opRFE();
 			break;
 		default:
 			throw std::runtime_error("Unhandled COP0 opcode...");
 		}
 	}
 
-	void CPU::opMFC(Instruction instruction)
+	// Move From Cop0
+	void CPU::opMFC()
 	{
-		auto regValue = m_registers[instruction.t];
+		const uint32_t copIndex = m_currentInstruction.SubOperation.d;
+		const uint32_t cpuIndex = m_currentInstruction.t;
+		uint32_t loadValue = 0;
 
-		switch (instruction.SubOperation.d)
+		switch (copIndex)
 		{
-		case 3:
-		case 5:
-		case 6:
-		case 7:
-		case 9:
-		case 11:
-			if (regValue != 0)
-				throw std::runtime_error("Unhandled write to cop0r");
-			break;
 		case 12:
-			m_sr = regValue;
+			loadValue = m_cop0.sr.value;
 			break;
 		case 13:
-			if (regValue != 0)
-				throw std::runtime_error("Unhandled write to CAUSE register!");
+			loadValue = m_cop0.cause.value;
+			break;
+		case 14:
+			loadValue = m_cop0.epc;
 			break;
 		default:
-			throw std::runtime_error("Unhandled COP0 MFC index value...");
+			throw std::runtime_error("Unhandled Move from COP0 index value...");
 		}
+
+		// fill load
+		m_loadPair = { cpuIndex, loadValue };
 	}
 
-	void CPU::opMTC(Instruction instruction)
+	// Move to Cop0
+	void CPU::opMTC()
 	{
-		auto regValue = m_registers[instruction.t];
+		auto regValue = m_registers[m_currentInstruction.t];
 
 		// To be used when Cop0 registers are implemented
-		// auto copRegIndex = instruction.SubOperation.d;
-		switch (instruction.SubOperation.d)
+		// auto copRegIndex = m_currentInstruction.SubOperation.d;
+		switch (m_currentInstruction.SubOperation.d)
 		{
 		case 3:
 		case 5:
@@ -278,89 +275,108 @@ namespace ePugStation
 				throw std::runtime_error("Unhandled write to cop0r");
 			break;
 		case 12:
-			m_sr = regValue;
+			m_cop0.sr = regValue;
 			break;
 		case 13:
 			if (regValue != 0)
-				throw std::runtime_error("Unhandled write to CAUSE register!");
+				m_cop0.cause = regValue;
+			break;
+		case 14:
+			if (regValue != 0)
+				m_cop0.epc = regValue;
 			break;
 		default:
-			throw std::runtime_error("Unhandled COP0 MTC index value...");
+			throw std::runtime_error("Unhandled move to Cop0 index value...");
 		}
 	}
 
-	void CPU::opSLT(Instruction instruction)
+	void CPU::opRFE()
 	{
-		auto s = static_cast<int32_t>(m_registers[instruction.s]);
-		auto t = static_cast<int32_t>(m_registers[instruction.t]);
+		if ((m_currentInstruction.op & 0x3f) != 0b010000)
+		{
+			throw std::runtime_error("Invalid cop0 instrcution...");
+		}
 
-		setReg(instruction.SubOperation.d, s < t);
+		// Previous moved to current and old to previous
+		m_cop0.sr.IEc = m_cop0.sr.IEp;
+		m_cop0.sr.KUc = m_cop0.sr.KUp;
+
+		m_cop0.sr.IEp = m_cop0.sr.IEo;
+		m_cop0.sr.KUp = m_cop0.sr.KUo;
 	}
 
-	void CPU::opSLTU(Instruction instruction)
+	void CPU::opSLT()
 	{
-		setReg(instruction.SubOperation.d, m_registers[instruction.s] < m_registers[instruction.t]);
+		auto s = static_cast<int32_t>(m_registers[m_currentInstruction.s]);
+		auto t = static_cast<int32_t>(m_registers[m_currentInstruction.t]);
+
+		setReg(m_currentInstruction.SubOperation.d, s < t);
 	}
 
-	void CPU::opSLTI(Instruction instruction)
+	void CPU::opSLTU()
 	{
-		setReg(instruction.t, static_cast<int32_t>(m_registers[instruction.s]) < instruction.imm);
+		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] < m_registers[m_currentInstruction.t]);
 	}
 
-	void CPU::opSLTIU(Instruction instruction)
+	void CPU::opSLTI()
 	{
-		setReg(instruction.t, m_registers[instruction.s] < instruction.imm);
+		setReg(m_currentInstruction.t, static_cast<int32_t>(m_registers[m_currentInstruction.s]) < m_currentInstruction.imm);
 	}
 
-	void CPU::opSRA(Instruction instruction)
+	void CPU::opSLTIU()
+	{
+		setReg(m_currentInstruction.t, m_registers[m_currentInstruction.s] < m_currentInstruction.imm);
+	}
+
+	void CPU::opSRA()
 	{
 		// For arithmetic shift : Signed integer
-		int32_t signedValue = static_cast<int32_t>(m_registers[instruction.t]);
+		int32_t signedValue = static_cast<int32_t>(m_registers[m_currentInstruction.t]);
 
 		// Here need to keep signed bit
-		setReg(instruction.SubOperation.d, signedValue >> instruction.SubOperation.h);
+		setReg(m_currentInstruction.SubOperation.d, signedValue >> m_currentInstruction.SubOperation.h);
 	}
 
-	void CPU::opSRL(Instruction instruction)
+	void CPU::opSRL()
 	{
 		// For logical shift : Unsigned integer
-		setReg(instruction.SubOperation.d, m_registers[instruction.t] >> instruction.SubOperation.h);
+		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.t] >> m_currentInstruction.SubOperation.h);
 	}
 
-	void CPU::opSRLV(Instruction instruction)
+	void CPU::opSRLV()
 	{
-		setReg(instruction.SubOperation.d, m_registers[instruction.t] >> m_registers[instruction.s]);
+		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.t] >> m_registers[m_currentInstruction.s]);
 	}
 
-	void CPU::opSUB(Instruction instruction)
+	void CPU::opSUB()
 	{
-		setReg(instruction.SubOperation.d, m_registers[instruction.s] - m_registers[instruction.t]);
+		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] - m_registers[m_currentInstruction.t]);
 	}
 
-	void CPU::opSUBU(Instruction instruction)
+	void CPU::opSUBU()
 	{
-		setReg(instruction.SubOperation.d, m_registers[instruction.s] - m_registers[instruction.t]);
+		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] - m_registers[m_currentInstruction.t]);
 	}
 
-	void CPU::opXOR(Instruction instruction)
+	void CPU::opXOR()
 	{
-		setReg(instruction.SubOperation.d, m_registers[instruction.s] ^ m_registers[instruction.t]);
+		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] ^ m_registers[m_currentInstruction.t]);
 	}
 
-	void CPU::opXORI(Instruction instruction)
+	void CPU::opXORI()
 	{
-		setReg(instruction.t, m_registers[instruction.s] ^ m_registers[instruction.imm]);
+		setReg(m_currentInstruction.t, m_registers[m_currentInstruction.s] ^ m_registers[m_currentInstruction.imm]);
 	}
 
-	void CPU::opSYSCALL(Instruction instruction)
+	void CPU::opSYSCALL()
 	{
-		// Do nothing...
+		exception(Exception::SysCall);
 	}
 
-	void CPU::opDIV(Instruction instruction)
+	void CPU::opDIV()
 	{
-		int32_t numerator = static_cast<int32_t>(m_registers[instruction.s]);
-		int32_t denominator = static_cast<int32_t>(m_registers[instruction.t]);
+		int32_t numerator = static_cast<int32_t>(m_registers[m_currentInstruction.s]);
+		int32_t denominator = static_cast<int32_t>(m_registers[m_currentInstruction.t]);
 
 		if (denominator == 0) // Div by 0
 		{
@@ -387,10 +403,10 @@ namespace ePugStation
 		}
 	}
 
-	void CPU::opDIVU(Instruction instruction)
+	void CPU::opDIVU()
 	{
-		uint32_t numerator = m_registers[instruction.s];
-		uint32_t denominator = m_registers[instruction.t];
+		uint32_t numerator = m_registers[m_currentInstruction.s];
+		uint32_t denominator = m_registers[m_currentInstruction.t];
 
 		if (denominator == 0) // Div by 0
 		{
@@ -405,266 +421,292 @@ namespace ePugStation
 		}
 	}
 
-	void CPU::opOR(Instruction instruction)
+	void CPU::opOR()
 	{
-		setReg(instruction.SubOperation.d, m_registers[instruction.s] | m_registers[instruction.SubOperation.t]);
+		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] | m_registers[m_currentInstruction.SubOperation.t]);
 	}
 
-	void CPU::opORI(Instruction instruction)
+	void CPU::opORI()
 	{
 		// TODO: Understand why imm is 32bit instead of 16 !!
 		// Might be worth to make functions with types for now to be less error prone...
-		setReg(instruction.t, m_registers[instruction.s] | (0x0000ffff & instruction.imm));
+		setReg(m_currentInstruction.t, m_registers[m_currentInstruction.s] | (0x0000ffff & m_currentInstruction.imm));
 	}
 
-	void CPU::opJ(Instruction instruction)
+	void CPU::opJ()
 	{
-		m_ip = (m_ip & 0xF0000000) | (instruction.immJump() << 2);
+		m_nextIp = (m_nextIp & 0xF0000000) | (m_currentInstruction.immJump() << 2);
 	}
 
-	void CPU::opJAL(Instruction instruction)
+	void CPU::opJAL()
 	{
-		setReg(31, m_ip);
-		opJ(instruction);
+		setReg(31, m_nextIp);
+		opJ();
 	}
 
-	void CPU::opJR(Instruction instruction)
+	void CPU::opJR()
 	{
-		m_ip = m_registers[instruction.s];
+		m_nextIp = m_registers[m_currentInstruction.s];
 	}
 
-	void CPU::opJALR(Instruction instruction)
+	void CPU::opJALR()
 	{
-		setReg(instruction.SubOperation.d, m_ip);
-		m_ip = m_registers[instruction.s];
+		setReg(m_currentInstruction.SubOperation.d, m_nextIp);
+		m_nextIp = m_registers[m_currentInstruction.s];
 	}
 
-	void CPU::opADDU(Instruction instruction)
+	void CPU::opADDU()
 	{
-		setReg(instruction.SubOperation.d, m_registers[instruction.s] + m_registers[instruction.t]);
+		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] + m_registers[m_currentInstruction.t]);
 	}
 
-	void CPU::opAND(Instruction instruction)
+	void CPU::opAND()
 	{
-		setReg(instruction.SubOperation.d, m_registers[instruction.s] & m_registers[instruction.t]);
+		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] & m_registers[m_currentInstruction.t]);
 	}
 
-	void CPU::opANDI(Instruction instruction)
+	void CPU::opANDI()
 	{
-		setReg(instruction.t, m_registers[instruction.s] & instruction.imm);
+		setReg(m_currentInstruction.t, m_registers[m_currentInstruction.s] & m_currentInstruction.imm);
 	}
 
-	void CPU::opBNE(Instruction instruction)
+	void CPU::opBNE()
 	{
-		if (m_registers[instruction.s] != m_registers[instruction.t])
+		if (m_registers[m_currentInstruction.s] != m_registers[m_currentInstruction.t])
 		{
-			branch(instruction.imm);
+			branch(m_currentInstruction.imm);
 		}
 	}
 
-	void CPU::opBEQ(Instruction instruction)
+	void CPU::opBEQ()
 	{
-		if (m_registers[instruction.s] == m_registers[instruction.t])
+		if (m_registers[m_currentInstruction.s] == m_registers[m_currentInstruction.t])
 		{
-			branch(instruction.imm);
+			branch(m_currentInstruction.imm);
 		}
 	}
 
-	void CPU::opBGEZ(Instruction instruction)
+	void CPU::opBGEZ()
 	{
-		if (static_cast<int32_t>(m_registers[instruction.s]) >= 0)
+		if (static_cast<int32_t>(m_registers[m_currentInstruction.s]) >= 0)
 		{
-			branch(instruction.imm);
+			branch(m_currentInstruction.imm);
 		}
 	}
 
-	void CPU::opBGEZAL(Instruction instruction)
+	void CPU::opBGEZAL()
 	{
-		if (static_cast<int32_t>(m_registers[instruction.s]) >= 0)
+		if (static_cast<int32_t>(m_registers[m_currentInstruction.s]) >= 0)
 		{
-			setReg(31, m_ip);
-			branch(instruction.imm);
+			setReg(31, m_nextIp);
+			branch(m_currentInstruction.imm);
 		}
 	}
 
-	void CPU::opBGTZ(Instruction instruction)
+	void CPU::opBGTZ()
 	{
-		if (static_cast<int32_t>(m_registers[instruction.s]) > 0)
+		if (static_cast<int32_t>(m_registers[m_currentInstruction.s]) > 0)
 		{
-			branch(instruction.imm);
+			branch(m_currentInstruction.imm);
 		}
 	}
 
-	void CPU::opBLEZ(Instruction instruction)
+	void CPU::opBLEZ()
 	{
-		if (static_cast<int32_t>(m_registers[instruction.s]) <= 0)
+		if (static_cast<int32_t>(m_registers[m_currentInstruction.s]) <= 0)
 		{
-			branch(instruction.imm);
+			branch(m_currentInstruction.imm);
 		}
 	}
 
-	void CPU::opBLTZ(Instruction instruction)
+	void CPU::opBLTZ()
 	{
-		if (static_cast<int32_t>(m_registers[instruction.s]) < 0)
+		if (static_cast<int32_t>(m_registers[m_currentInstruction.s]) < 0)
 		{
-			branch(instruction.imm);
+			branch(m_currentInstruction.imm);
 		}
 	}
 
-	void CPU::opBLTZAL(Instruction instruction)
+	void CPU::opBLTZAL()
 	{
-		if (static_cast<int32_t>(m_registers[instruction.s]) < 0)
+		if (static_cast<int32_t>(m_registers[m_currentInstruction.s]) < 0)
 		{
-			setReg(31, m_ip);
-			branch(instruction.imm);
+			setReg(31, m_nextIp);
+			branch(m_currentInstruction.imm);
 		}
 	}
 
-	void CPU::opADDIU(Instruction instruction)
+	void CPU::opADDIU()
 	{
-		setReg(instruction.t, m_registers[instruction.s] + instruction.imm);
+		setReg(m_currentInstruction.t, m_registers[m_currentInstruction.s] + m_currentInstruction.imm);
 	}
 
-	void CPU::opADD(Instruction instruction)
+	void CPU::opADD()
 	{
 		uint32_t result = 0;
-		if (!safeAdd(m_registers[instruction.s], instruction.imm, result))
+		if (!safeAdd(m_registers[m_currentInstruction.s], m_currentInstruction.imm, result))
 		{
 			throw std::runtime_error("NOT IMPLEMENTED");
 		}
 		else
 		{
-			setReg(instruction.SubOperation.d, m_registers[instruction.s] + m_registers[instruction.t]);
+			setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] + m_registers[m_currentInstruction.t]);
 		}
 	}
 
-	void CPU::opADDI(Instruction instruction)
+	void CPU::opADDI()
 	{
 		uint32_t result = 0;
-		if (!safeAdd(m_registers[instruction.s], instruction.imm, result))
+		if (!safeAdd(m_registers[m_currentInstruction.s], m_currentInstruction.imm, result))
 		{
 			throw std::runtime_error("NOT IMPLEMENTED");
 		}
 		else
 		{
-			setReg(instruction.t, result);
+			setReg(m_currentInstruction.t, result);
 		}
 	}
 
-	void CPU::opSLL(Instruction instruction)
+	void CPU::opSLL()
 	{
-		setReg(instruction.SubOperation.d, m_registers[instruction.t] << instruction.SubOperation.h);
+		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.t] << m_currentInstruction.SubOperation.h);
 	}
 
-	void CPU::opSLLV(Instruction instruction)
+	void CPU::opSLLV()
 	{
-		setReg(instruction.SubOperation.d, m_registers[instruction.t] << m_registers[instruction.s]);
+		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.t] << m_registers[m_currentInstruction.s]);
 	}
 
-	void CPU::opMFHI(Instruction instruction)
+	void CPU::opMFHI()
 	{
-		setReg(instruction.SubOperation.d, m_HI);
+		setReg(m_currentInstruction.SubOperation.d, m_HI);
 	}
 
-	void CPU::opMFLO(Instruction instruction)
+	void CPU::opMFLO()
 	{
-		setReg(instruction.SubOperation.d, m_LO);
+		setReg(m_currentInstruction.SubOperation.d, m_LO);
 	}
 
-	void CPU::opMULT(Instruction instruction)
+	void CPU::opMTHI()
 	{
-		auto s = static_cast<int32_t>(m_registers[instruction.s]);
-		auto t = static_cast<int32_t>(m_registers[instruction.t]);
+		m_HI = m_registers[m_currentInstruction.s];
+	}
+
+	void CPU::opMTLO()
+	{
+		m_LO = m_registers[m_currentInstruction.s];
+	}
+
+	void CPU::opMULT()
+	{
+		auto s = static_cast<int32_t>(m_registers[m_currentInstruction.s]);
+		auto t = static_cast<int32_t>(m_registers[m_currentInstruction.t]);
 		m_LO = s * t;
 	}
 
-	void CPU::opMULTU(Instruction instruction)
+	void CPU::opMULTU()
 	{
-		m_LO = m_registers[instruction.s] * m_registers[instruction.t];
+		m_LO = m_registers[m_currentInstruction.s] * m_registers[m_currentInstruction.t];
 	}
 
-	void CPU::opSH(Instruction instruction)
+	void CPU::opSH()
 	{
-		if ((m_sr & 0x10000) != 0)
+		if (m_cop0.sr.Isc == 1)
 		{
 			std::cout << "Ignoring store while cache is isolated...\n";
 			return;
 		}
-		uint32_t address = m_registers[instruction.s] + instruction.imm;
-		store16(address, m_registers[instruction.t]);
+		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
+		store16(address, m_registers[m_currentInstruction.t]);
 	}
 
-	void CPU::opSB(Instruction instruction)
+	void CPU::opSB()
 	{
-		if ((m_sr & 0x10000) != 0)
+		if (m_cop0.sr.Isc == 1)
 		{
 			std::cout << "Ignoring store while cache is isolated...\n";
 			return;
 		}
-		uint32_t address = m_registers[instruction.s] + instruction.imm;
-		store8(address, 0xff & m_registers[instruction.t]);
+		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
+		store8(address, 0xff & m_registers[m_currentInstruction.t]);
 	}
 
-	void CPU::opSW(Instruction instruction)
+	void CPU::opSW()
 	{
-		if ((m_sr & 0x10000) != 0)
+		if (m_cop0.sr.Isc == 1)
 		{
 			std::cout << "Ignoring store while cache is isolated...\n";
 			return;
 		}
-		uint32_t address = m_registers[instruction.s] + instruction.imm;
-		store32(address, m_registers[instruction.t]);
+		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
+		store32(address, m_registers[m_currentInstruction.t]);
 	}
 
-	void CPU::opLW(Instruction instruction)
+	void CPU::opLW()
 	{
-		if ((m_sr & 0x10000) != 0)
+		if (m_cop0.sr.Isc == 1)
 		{
 			std::cout << "Ignoring load while cache is isolated...\n";
 			return;
 		}
-		uint32_t address = m_registers[instruction.s] + instruction.imm;
-		m_loadPair = { instruction.t, load32(address) };
+		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
+		m_loadPair = { m_currentInstruction.t, load32(address) };
 	}
 
-	void CPU::opLB(Instruction instruction)
+	void CPU::opLB()
 	{
-		if ((m_sr & 0x10000) != 0)
+		if (m_cop0.sr.Isc == 1)
 		{
 			std::cout << "Ignoring load while cache is isolated...\n";
 			return;
 		}
-		uint32_t address = m_registers[instruction.s] + instruction.imm;
+		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
 		int8_t loadValue = load8(address);
-		m_loadPair = { instruction.t, static_cast<uint32_t>(loadValue) };
+		m_loadPair = { m_currentInstruction.t, static_cast<uint32_t>(loadValue) };
 	}
 
-	void CPU::opLBU(Instruction instruction)
+	void CPU::opLBU()
 	{
-		// TBD if this is correct
-		if ((m_sr & 0x10000) != 0)
+		if (m_cop0.sr.Isc == 1)
 		{
 			std::cout << "Ignoring load while cache is isolated...\n";
 			return;
 		}
-		uint32_t address = m_registers[instruction.s] + instruction.imm;
-		m_loadPair = { instruction.t, load8(address) };
+		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
+		m_loadPair = { m_currentInstruction.t, load8(address) };
 	}
 
-	void CPU::opLH(Instruction instruction)
+	void CPU::opLH()
 	{
-		// TBD if this is correct
-		if ((m_sr & 0x10000) != 0)
+		if (m_cop0.sr.Isc == 1)
 		{
 			std::cout << "Ignoring load while cache is isolated...\n";
 			return;
 		}
-		uint32_t address = m_registers[instruction.s] + instruction.imm;
-		m_loadPair = { instruction.t, load16(address) };
+		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
+		m_loadPair = { m_currentInstruction.t, load16(address) };
 	}
 
-	void CPU::opLUI(Instruction instruction)
+	void CPU::opLUI()
 	{
-		setReg(instruction.t, (instruction.imm << 16));
+		setReg(m_currentInstruction.t, (m_currentInstruction.imm << 16));
+	}
+
+	void CPU::exception(Exception exception)
+	{
+		uint32_t handler = m_cop0.sr.BEV == 1 ? 0xbfc00180 : 0x80000080;
+
+		// Update Interrupt and Kernel/User mode bits
+		m_cop0.sr.IEo = m_cop0.sr.IEp;
+		m_cop0.sr.KUo = m_cop0.sr.KUp;
+		m_cop0.sr.IEp = m_cop0.sr.IEc;
+		m_cop0.sr.KUp = m_cop0.sr.KUc;
+
+		m_cop0.cause.excode = static_cast<uint32_t>(exception);
+
+		m_cop0.epc = m_currentIp;
+
+		m_ip = handler;
+		m_nextIp = m_ip + 4;
 	}
 }
