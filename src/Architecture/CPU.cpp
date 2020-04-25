@@ -1,5 +1,6 @@
 #include "CPU.h"
 #include <Utilities/OpUtilities.h>
+#include <Utilities/Utils.h>
 #include <iostream>
 
 namespace ePugStation
@@ -8,7 +9,9 @@ namespace ePugStation
 		m_ip(BIOS_ROM_LOGICAL),
 		m_loadPair({ 0, 0 }),
 		m_HI(0xdeadbeaf),
-		m_LO(0xdeadbeaf)
+		m_LO(0xdeadbeaf),
+		m_isBranching(false),
+		m_delaySlot(false)
 	{
 		// Make constructor for cop0
 		m_cop0.sr = 0;
@@ -16,7 +19,7 @@ namespace ePugStation
 		m_cop0.epc = 0;
 
 		m_nextIp = m_ip + 4;
-		
+
 		m_registers.fill(0xdeadbeef);
 		m_outputRegisters.fill(0xdeadbeef);
 		m_registers[0] = 0; // Constant R0
@@ -25,8 +28,19 @@ namespace ePugStation
 	void CPU::runNextInstruction()
 	{
 		m_currentInstruction = Instruction(load32(m_ip));
+
+		m_delaySlot = m_isBranching;
+		m_isBranching = false;
+
 		m_currentIp = m_ip;
 		m_ip = m_nextIp;
+
+		if (!checkIfAlignedBy<ALIGNED_FOR_32_BITS>(m_currentIp))
+		{
+			exception(Exception::LoadAddressError);
+			return;
+		}
+
 		std::cout << "m_ip : " + std::to_string(m_currentIp) + "\n";
 		// Point IP to next instruction
 		m_nextIp += 4;
@@ -210,6 +224,7 @@ namespace ePugStation
 	{
 		m_nextIp -= 4;
 		m_nextIp += (offset << 2);
+		m_isBranching = true;
 	}
 
 	void CPU::opCop0()
@@ -436,6 +451,7 @@ namespace ePugStation
 	void CPU::opJ()
 	{
 		m_nextIp = (m_nextIp & 0xF0000000) | (m_currentInstruction.immJump() << 2);
+		m_isBranching = true;
 	}
 
 	void CPU::opJAL()
@@ -447,12 +463,14 @@ namespace ePugStation
 	void CPU::opJR()
 	{
 		m_nextIp = m_registers[m_currentInstruction.s];
+		m_isBranching = true;
 	}
 
 	void CPU::opJALR()
 	{
 		setReg(m_currentInstruction.SubOperation.d, m_nextIp);
 		m_nextIp = m_registers[m_currentInstruction.s];
+		m_isBranching = true;
 	}
 
 	void CPU::opADDU()
@@ -546,7 +564,7 @@ namespace ePugStation
 		uint32_t result = 0;
 		if (!safeAdd(m_registers[m_currentInstruction.s], m_currentInstruction.imm, result))
 		{
-			throw std::runtime_error("NOT IMPLEMENTED");
+			exception(Exception::Overflow);
 		}
 		else
 		{
@@ -559,7 +577,7 @@ namespace ePugStation
 		uint32_t result = 0;
 		if (!safeAdd(m_registers[m_currentInstruction.s], m_currentInstruction.imm, result))
 		{
-			throw std::runtime_error("NOT IMPLEMENTED");
+			exception(Exception::Overflow);
 		}
 		else
 		{
@@ -617,7 +635,14 @@ namespace ePugStation
 			return;
 		}
 		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
-		store16(address, m_registers[m_currentInstruction.t]);
+		if (checkIfAlignedBy<ALIGNED_FOR_16_BITS>(address))
+		{
+			store16(address, m_registers[m_currentInstruction.t]);
+		}
+		else
+		{
+			exception(Exception::StoreAddressError);
+		}
 	}
 
 	void CPU::opSB()
@@ -639,7 +664,14 @@ namespace ePugStation
 			return;
 		}
 		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
-		store32(address, m_registers[m_currentInstruction.t]);
+		if (checkIfAlignedBy<ALIGNED_FOR_32_BITS>(address))
+		{
+			store32(address, m_registers[m_currentInstruction.t]);
+		}
+		else
+		{
+			exception(Exception::StoreAddressError);
+		}
 	}
 
 	void CPU::opLW()
@@ -650,7 +682,14 @@ namespace ePugStation
 			return;
 		}
 		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
-		m_loadPair = { m_currentInstruction.t, load32(address) };
+		if (checkIfAlignedBy<ALIGNED_FOR_32_BITS>(address))
+		{
+			m_loadPair = { m_currentInstruction.t, load32(address) };
+		}
+		else
+		{
+			exception(Exception::LoadAddressError);
+		}
 	}
 
 	void CPU::opLB()
@@ -684,7 +723,14 @@ namespace ePugStation
 			return;
 		}
 		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
-		m_loadPair = { m_currentInstruction.t, load16(address) };
+		if (checkIfAlignedBy<ALIGNED_FOR_16_BITS>(address))
+		{
+			m_loadPair = { m_currentInstruction.t, load16(address) };
+		}
+		else
+		{
+			exception(Exception::LoadAddressError);
+		}
 	}
 
 	void CPU::opLUI()
@@ -705,6 +751,12 @@ namespace ePugStation
 		m_cop0.cause.excode = static_cast<uint32_t>(exception);
 
 		m_cop0.epc = m_currentIp;
+
+		if (m_delaySlot)
+		{
+			m_cop0.epc -= 4;
+			m_cop0.cause.BD = 1;
+		}
 
 		m_ip = handler;
 		m_nextIp = m_ip + 4;

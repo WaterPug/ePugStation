@@ -76,7 +76,10 @@ namespace ePugStation
 
 	enum Exception
 	{
-		SysCall = 0x8
+		SysCall = 0x8, // Syscall operation
+		Overflow = 0xc, // Arithmetic overflow
+		LoadAddressError = 0x4, 
+		StoreAddressError = 0x5
 	};
 
 	class CPU
@@ -97,6 +100,9 @@ namespace ePugStation
 
 		uint32_t m_HI;
 		uint32_t m_LO;
+
+		bool m_isBranching; // If branch occured in current instruction
+		bool m_delaySlot;   // If last op was branch, we are in delay slot
 
 		std::array<uint32_t, CPU_REGISTERS> m_registers;
 		std::array<uint32_t, CPU_REGISTERS> m_outputRegisters;

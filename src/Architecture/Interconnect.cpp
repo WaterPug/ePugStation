@@ -55,8 +55,6 @@ namespace ePugStation
 
 	uint16_t Interconnect::load16(uint32_t address) const
 	{
-		checkIfAlignedBy<ALIGNED_FOR_16_BITS>(address);
-
 		uint32_t physicalAddress = maskRegion(address);
 
 		if (SPU_RANGE.contains(physicalAddress))
@@ -72,8 +70,6 @@ namespace ePugStation
 
 	uint32_t Interconnect::load32(uint32_t address) const
 	{
-		checkIfAlignedBy<ALIGNED_FOR_32_BITS>(address);
-
 		uint32_t physicalAddress = maskRegion(address);
 
 		if (BIOS_RANGE_PHYSICAL.contains(physicalAddress))
@@ -113,8 +109,6 @@ namespace ePugStation
 
 	void Interconnect::store16(uint32_t address, uint16_t value)
 	{
-		checkIfAlignedBy<ALIGNED_FOR_16_BITS>(address);
-
 		uint32_t physicalAddress = maskRegion(address);
 
 		if (SPU_RANGE.contains(physicalAddress))
@@ -133,8 +127,6 @@ namespace ePugStation
 
 	void Interconnect::store32(uint32_t address, uint32_t value)
 	{
-		checkIfAlignedBy<ALIGNED_FOR_32_BITS>(address);
-
 		uint32_t physicalAddress = maskRegion(address);
 
 		if (BIOS_RANGE_PHYSICAL.contains(physicalAddress))
