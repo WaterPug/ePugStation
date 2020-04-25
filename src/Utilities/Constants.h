@@ -60,8 +60,18 @@ namespace ePugStation
 
 	// Timers
 	constexpr uint32_t TIMERS_START = 0x1f801100;
-	constexpr uint32_t TIMERS_SIZE = 48; // TBD if this is valid
+	constexpr uint32_t TIMERS_SIZE = 48;
 	constexpr Range<TIMERS_START, TIMERS_SIZE> TIMERS_RANGE;
+
+	// DMA
+	constexpr uint32_t DMA_START = 0x1f801080;
+	constexpr uint32_t DMA_SIZE = 128;
+	constexpr Range<DMA_START, DMA_SIZE> DMA_RANGE;
+
+	// GPU
+	constexpr uint32_t GPU_START = 0x1f801810;
+	constexpr uint32_t GPU_SIZE = 8;
+	constexpr Range<GPU_START, GPU_SIZE> GPU_RANGE;
 
 	// General uses
 	constexpr uint32_t ALIGNED_FOR_32_BITS = 4;

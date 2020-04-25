@@ -16,34 +16,31 @@ namespace ePugStation
 		union 
 		{
 			uint32_t op;
-			struct 
+			struct
 			{
-				union 
-				{
-					struct 
-					{
-						signed imm : 16;
-						unsigned t : 5; // [20:16]
-						unsigned s : 5; // [25:21]
-						unsigned function : 6; // [31:26]
-					};
-					struct 
-					{
-						unsigned sub : 6;
-						unsigned h : 5;
-						unsigned d : 5;
-						unsigned t : 5; // [20:16]
-						unsigned s : 5; // [25:21]
-						unsigned function : 6; // [31:26]
-					}SubOperation;
-				};
+				uint32_t sub : 6;
+				uint32_t h : 5;
+				uint32_t d : 5;
+				uint32_t t : 5; // [20:16]
+				uint32_t s : 5; // [25:21]
+				uint32_t function : 6; // [31:26]
+			};
+			struct
+			{
+				int32_t imm_se : 16;
+				uint32_t ignore1 : 16; // [20:16]
+			};
+			struct
+			{
+				uint32_t imm : 16;
+				uint32_t ignore2 : 16; // [20:16]
+			};
+			struct
+			{
+				uint32_t immJump : 26;
+				uint32_t ignore2 : 6;
 			};
 		};
-
-		uint32_t immJump()
-		{
-			return op & 0x03FFFFFF;
-		}
 	};
 }
 #endif

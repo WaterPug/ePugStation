@@ -9,4 +9,14 @@ namespace ePugStation
 		result = static_cast<uint32_t>(t);
 		return ((t & 0xFFFFFFFF00000000) == 0);
 	}
+
+	bool isAddOverflow(int32_t a, int32_t b, int32_t sum)
+	{
+		return !((a ^ b) & 0x80000000) && ((sum ^ a) & 0x80000000);
+	}
+
+	bool isSubOverflow(int32_t a, int32_t b, int32_t sum)
+	{
+		return ((a ^ b) & 0x80000000) && ((sum ^ a) & 0x80000000);
+	}
 }

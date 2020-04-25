@@ -60,7 +60,16 @@ namespace ePugStation
 		if (SPU_RANGE.contains(physicalAddress))
 		{
 			std::cout << "Unhandled SPU load16, ignoring...\n";
-			throw std::runtime_error("unhandled interconnect load16 address..." + std::to_string(physicalAddress));
+			return 0;
+		}
+		else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
+		{
+			return m_ram.load16(RAM_RANGE_PHYSICAL.offset(physicalAddress));
+		}
+		else if (INTERRUPT_CONTROL_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled INTERRUPT CONTROL load16, ignoring...\n";
+			return 0;
 		}
 		else
 		{
@@ -84,6 +93,16 @@ namespace ePugStation
 		{
 			std::cout << "Unhandled INTERRUPT CONTROL load32, ignoring...\n";
 			return 0;
+		}
+		else if (DMA_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled DMA load32, ignoring...\n";
+			return 0;
+		}
+		else if (GPU_RANGE.contains(physicalAddress))
+		{
+			auto offset = GPU_RANGE.offset(physicalAddress);
+			return (offset == 4) ? 0x10000000 : 0;
 		}
 
 		throw std::runtime_error("unhandled interconnect load address..." + std::to_string(physicalAddress));
@@ -118,6 +137,14 @@ namespace ePugStation
 		else if (TIMERS_RANGE.contains(physicalAddress))
 		{
 			std::cout << "Unhandled TIMERS store16, ignoring...\n";
+		}
+		else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
+		{
+			return m_ram.store16(RAM_RANGE_PHYSICAL.offset(physicalAddress), value);
+		}
+		else if (INTERRUPT_CONTROL_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled INTERRUPT CONTROL store16, ignoring...\n";
 		}
 		else
 		{
@@ -164,6 +191,18 @@ namespace ePugStation
 		else if (INTERRUPT_CONTROL_RANGE.contains(physicalAddress))
 		{
 			std::cout << "Unhandled INTERRUPT_CONTROL store, ignoring...\n";
+		}
+		else if (DMA_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled DMA store, ignoring...\n";
+		}
+		else if (GPU_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled GPU store, ignoring...\n";
+		}
+		else if (TIMERS_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled TIMERS store, ignoring...\n";
 		}
 		else
 		{

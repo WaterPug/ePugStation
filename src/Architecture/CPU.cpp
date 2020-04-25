@@ -2,6 +2,7 @@
 #include <Utilities/OpUtilities.h>
 #include <Utilities/Utils.h>
 #include <iostream>
+#include <iomanip>
 
 namespace ePugStation
 {
@@ -27,7 +28,8 @@ namespace ePugStation
 
 	void CPU::runNextInstruction()
 	{
-		m_currentInstruction = Instruction(load32(m_ip));
+		m_instruction = Instruction(load32(m_ip));
+		++debugLineCounter;
 
 		m_delaySlot = m_isBranching;
 		m_isBranching = false;
@@ -41,7 +43,11 @@ namespace ePugStation
 			return;
 		}
 
-		std::cout << "m_ip : " + std::to_string(m_currentIp) + "\n";
+		if (debugLineCounter > 19000000)
+		{
+			std::cout << "Current ip = " << std::hex << m_currentIp;
+		}
+		std::cout << ". Line counter : " << std::to_string(debugLineCounter) << "\n";
 		// Point IP to next instruction
 		m_nextIp += 4;
 		setReg(m_loadPair);
@@ -82,7 +88,7 @@ namespace ePugStation
 
 	void CPU::decodeAndExecuteCurrentOp()
 	{
-		switch (m_currentInstruction.function)
+		switch (m_instruction.function)
 		{
 			// Sub Op
 		case 0b000000: matchSubOp(); break;
@@ -117,40 +123,60 @@ namespace ePugStation
 
 			// Cop
 		case 0b010000: opCop0(); break;
+		case 0b010001: opCop1(); break;
+		case 0b010010: opCop2(); break;
+		case 0b010011: opCop3(); break;
 
 			// Load
 		case 0b001111: opLUI(); break;
 		case 0b100000: opLB(); break;
 		case 0b100100: opLBU(); break;
 		case 0b100001: opLH(); break;
+		case 0b100010: opLWL(); break;
 		case 0b100011: opLW(); break;
+		case 0b100101: opLHU(); break;
+		case 0b100110: opLWR(); break;
 
 			// Store
 		case 0b101000: opSB(); break;
 		case 0b101001: opSH(); break;
+		case 0b101010: opSWL(); break;
 		case 0b101011: opSW(); break;
+		case 0b101110: opSWR(); break;
+
+			// LWCx
+		case 0b110000: opLWC0(); break;
+		case 0b110001: opLWC1(); break;
+		case 0b110010: opLWC2(); break;
+		case 0b110011: opLWC3(); break;
+
+			// SWCx
+		case 0b111000: opSWC0(); break;
+		case 0b111001: opSWC1(); break;
+		case 0b111010: opSWC2(); break;
+		case 0b111011: opSWC3(); break;
 
 		default:
-			throw std::runtime_error("Instruction function not implemented with function : " + std::to_string(m_currentInstruction.function));
+			throw std::runtime_error("Instruction function not implemented with function : " + std::to_string(m_instruction.function));
 		}
 	}
 
 	void CPU::matchSubBranchOp()
 	{
-		switch (m_currentInstruction.t)
+		switch (m_instruction.t)
 		{
 		case 0b00000: opBLTZ(); break;
 		case 0b00001: opBGEZ(); break;
 		case 0b10000: opBLTZAL(); break;
 		case 0b10001: opBGEZAL(); break;
 		default:
-			throw std::runtime_error("Unsupported t value at address : " + std::to_string(m_currentInstruction.function));
+			throw std::runtime_error("Unsupported t value at address : " + std::to_string(m_instruction.function));
 		}
 	}
 
 	void CPU::matchSubOp()
 	{
-		switch (m_currentInstruction.SubOperation.sub)
+		switch (m_instruction.sub)
 		{
 			// Shifts
 		case 0b000000: opSLL();  break;
@@ -158,6 +184,7 @@ namespace ePugStation
 		case 0b000011: opSRA();  break;
 		case 0b000100: opSLLV(); break;
 		case 0b000110: opSRLV();  break;
+		case 0b000111: opSRAV();  break;
 
 			// Jump
 		case 0b001000: opJR(); break;
@@ -165,14 +192,13 @@ namespace ePugStation
 
 			// SYSCALL
 		case 0b001100: opSYSCALL(); break;
+		case 0b001101: opBREAK(); break;
 
 			// Move
 		case 0b010000: opMFHI(); break;
 		case 0b010001: opMTHI(); break;
 		case 0b010010: opMFLO(); break;
 		case 0b010011: opMTLO(); break;
-
-
 
 			// Mult
 		case 0b011000: opMULT(); break;
@@ -198,6 +224,7 @@ namespace ePugStation
 
 			// XOR
 		case 0b100110: opXOR(); break;
+		case 0b100111: opNOR(); break;
 
 			// Set
 		case 0b101010: opSLT(); break;
@@ -222,14 +249,14 @@ namespace ePugStation
 
 	void CPU::branch(uint32_t offset)
 	{
-		m_nextIp -= 4;
 		m_nextIp += (offset << 2);
+		m_nextIp -= 4;
 		m_isBranching = true;
 	}
 
 	void CPU::opCop0()
 	{
-		switch (m_currentInstruction.s)
+		switch (m_instruction.s)
 		{
 		case 0b00000:
 			opMFC();
@@ -245,11 +272,28 @@ namespace ePugStation
 		}
 	}
 
+	void CPU::opCop1()
+	{
+		exception(Exception::CoprocessorError); // Doesn't exist on Playstation
+	}
+
+	// GTE
+	void CPU::opCop2()
+	{
+		throw std::runtime_error("Unhandled GTE instruction");
+	}
+
+	void CPU::opCop3()
+	{
+		exception(Exception::CoprocessorError); // Doesn't exist on Playstation
+
+	}
+
 	// Move From Cop0
 	void CPU::opMFC()
 	{
-		const uint32_t copIndex = m_currentInstruction.SubOperation.d;
-		const uint32_t cpuIndex = m_currentInstruction.t;
+		const uint32_t copIndex = m_instruction.d;
+		const uint32_t cpuIndex = m_instruction.t;
 		uint32_t loadValue = 0;
 
 		switch (copIndex)
@@ -274,11 +318,11 @@ namespace ePugStation
 	// Move to Cop0
 	void CPU::opMTC()
 	{
-		auto regValue = m_registers[m_currentInstruction.t];
+		auto regValue = m_registers[m_instruction.t];
 
 		// To be used when Cop0 registers are implemented
-		// auto copRegIndex = m_currentInstruction.SubOperation.d;
-		switch (m_currentInstruction.SubOperation.d)
+		// auto copRegIndex = m_instruction.d;
+		switch (m_instruction.d)
 		{
 		case 3:
 		case 5:
@@ -305,9 +349,55 @@ namespace ePugStation
 		}
 	}
 
+	void CPU::opLWC0()
+	{
+		exception(Exception::CoprocessorError);
+	}
+
+	void CPU::opLWC1()
+	{
+		exception(Exception::CoprocessorError);
+	}
+
+	void CPU::opLWC2()
+	{
+		throw std::runtime_error("Unhandled GTE LWC2 operation...");
+	}
+
+	void CPU::opLWC3()
+	{
+		exception(Exception::CoprocessorError);
+	}
+
+	void CPU::opSWC0()
+	{
+		exception(Exception::CoprocessorError);
+	}
+
+	void CPU::opSWC1()
+	{
+		exception(Exception::CoprocessorError);
+	}
+
+	void CPU::opSWC2()
+	{
+		throw std::runtime_error("Unhandled GTE SWC2 operation...");
+	}
+
+	void CPU::opSWC3()
+	{
+		exception(Exception::CoprocessorError);
+	}
+
+	void CPU::opIllegal()
+	{
+		std::cout << "Illegal instruction...\n";
+		exception(Exception::IllegalInstruction);
+	}
+
 	void CPU::opRFE()
 	{
-		if ((m_currentInstruction.op & 0x3f) != 0b010000)
+		if ((m_instruction.op & 0x3f) != 0b010000)
 		{
 			throw std::runtime_error("Invalid cop0 instrcution...");
 		}
@@ -322,65 +412,88 @@ namespace ePugStation
 
 	void CPU::opSLT()
 	{
-		auto s = static_cast<int32_t>(m_registers[m_currentInstruction.s]);
-		auto t = static_cast<int32_t>(m_registers[m_currentInstruction.t]);
+		auto s = static_cast<int32_t>(m_registers[m_instruction.s]);
+		auto t = static_cast<int32_t>(m_registers[m_instruction.t]);
 
-		setReg(m_currentInstruction.SubOperation.d, s < t);
+		setReg(m_instruction.d, s < t);
 	}
 
 	void CPU::opSLTU()
 	{
-		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] < m_registers[m_currentInstruction.t]);
+		setReg(m_instruction.d, m_registers[m_instruction.s] < m_registers[m_instruction.t]);
 	}
 
 	void CPU::opSLTI()
 	{
-		setReg(m_currentInstruction.t, static_cast<int32_t>(m_registers[m_currentInstruction.s]) < m_currentInstruction.imm);
+		auto s = static_cast<int32_t>(m_registers[m_instruction.s]);
+
+		setReg(m_instruction.t, s < m_instruction.imm_se);
 	}
 
 	void CPU::opSLTIU()
 	{
-		setReg(m_currentInstruction.t, m_registers[m_currentInstruction.s] < m_currentInstruction.imm);
+		setReg(m_instruction.t, m_registers[m_instruction.s] < m_instruction.imm);
 	}
 
 	void CPU::opSRA()
 	{
 		// For arithmetic shift : Signed integer
-		int32_t signedValue = static_cast<int32_t>(m_registers[m_currentInstruction.t]);
+		int32_t signedValue = static_cast<int32_t>(m_registers[m_instruction.t]);
 
 		// Here need to keep signed bit
-		setReg(m_currentInstruction.SubOperation.d, signedValue >> m_currentInstruction.SubOperation.h);
+		setReg(m_instruction.d, signedValue >> m_instruction.h);
+	}
+
+	void CPU::opSRAV()
+	{
+		// For arithmetic shift : Signed integer
+		int32_t signedValue = static_cast<int32_t>(m_registers[m_instruction.t]);
+
+		// Here need to keep signed bit
+		setReg(m_instruction.d, signedValue >> (m_registers[m_instruction.s] & 0x1f));
+
 	}
 
 	void CPU::opSRL()
 	{
 		// For logical shift : Unsigned integer
-		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.t] >> m_currentInstruction.SubOperation.h);
+		setReg(m_instruction.d, m_registers[m_instruction.t] >> m_instruction.h);
 	}
 
 	void CPU::opSRLV()
 	{
-		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.t] >> m_registers[m_currentInstruction.s]);
+		setReg(m_instruction.d, m_registers[m_instruction.t] >> (m_registers[m_instruction.s] & 0x1f));
 	}
 
 	void CPU::opSUB()
 	{
-		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] - m_registers[m_currentInstruction.t]);
+		auto s = static_cast<int32_t>(m_registers[m_instruction.s]);
+		auto t = static_cast<int32_t>(m_registers[m_instruction.t]);
+		auto result = s - t;
+
+		if (isSubOverflow(s, t, result))
+		{
+			exception(Exception::Overflow);
+		}
+		else
+		{
+			setReg(m_instruction.d, result);
+		}
 	}
 
 	void CPU::opSUBU()
 	{
-		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] - m_registers[m_currentInstruction.t]);
+		setReg(m_instruction.d, m_registers[m_instruction.s] - m_registers[m_instruction.t]);
 	}
 
 	void CPU::opXOR()
 	{
-		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] ^ m_registers[m_currentInstruction.t]);
+		setReg(m_instruction.d, m_registers[m_instruction.s] ^ m_registers[m_instruction.t]);
 	}
 
 	void CPU::opXORI()
 	{
-		setReg(m_currentInstruction.t, m_registers[m_currentInstruction.s] ^ m_registers[m_currentInstruction.imm]);
+		setReg(m_instruction.t, m_registers[m_instruction.s] ^ m_registers[m_instruction.imm]);
 	}
 
 	void CPU::opSYSCALL()
@@ -388,14 +501,19 @@ namespace ePugStation
 		exception(Exception::SysCall);
 	}
 
+	void CPU::opBREAK()
+	{
+		exception(Exception::Break);
+	}
+
 	void CPU::opDIV()
 	{
-		int32_t numerator = static_cast<int32_t>(m_registers[m_currentInstruction.s]);
-		int32_t denominator = static_cast<int32_t>(m_registers[m_currentInstruction.t]);
+		int32_t numerator = static_cast<int32_t>(m_registers[m_instruction.s]);
+		int32_t denominator = static_cast<int32_t>(m_registers[m_instruction.t]);
 
 		if (denominator == 0) // Div by 0
 		{
-			m_HI = numerator;
+			m_HI = static_cast<uint32_t>(numerator);
 			if (numerator >= 0)
 			{
 				m_LO = 0xFFFFFFFF;
@@ -420,8 +538,8 @@ namespace ePugStation
 
 	void CPU::opDIVU()
 	{
-		uint32_t numerator = m_registers[m_currentInstruction.s];
-		uint32_t denominator = m_registers[m_currentInstruction.t];
+		uint32_t numerator = m_registers[m_instruction.s];
+		uint32_t denominator = m_registers[m_instruction.t];
 
 		if (denominator == 0) // Div by 0
 		{
@@ -438,19 +556,23 @@ namespace ePugStation
 
 	void CPU::opOR()
 	{
-		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] | m_registers[m_currentInstruction.SubOperation.t]);
+		setReg(m_instruction.d, m_registers[m_instruction.s] | m_registers[m_instruction.t]);
 	}
 
 	void CPU::opORI()
 	{
-		// TODO: Understand why imm is 32bit instead of 16 !!
-		// Might be worth to make functions with types for now to be less error prone...
-		setReg(m_currentInstruction.t, m_registers[m_currentInstruction.s] | (0x0000ffff & m_currentInstruction.imm));
+		setReg(m_instruction.t, m_registers[m_instruction.s] | m_instruction.imm);
 	}
+
+	void CPU::opNOR()
+	{
+		setReg(m_instruction.d, !(m_registers[m_instruction.s] | m_registers[m_instruction.t]));
+	}
+
 
 	void CPU::opJ()
 	{
-		m_nextIp = (m_nextIp & 0xF0000000) | (m_currentInstruction.immJump() << 2);
+		m_nextIp = (m_nextIp & 0xF0000000) | (m_instruction.immJump << 2);
 		m_isBranching = true;
 	}
 
@@ -462,169 +584,189 @@ namespace ePugStation
 
 	void CPU::opJR()
 	{
-		m_nextIp = m_registers[m_currentInstruction.s];
+		m_nextIp = m_registers[m_instruction.s];
 		m_isBranching = true;
 	}
 
 	void CPU::opJALR()
 	{
-		setReg(m_currentInstruction.SubOperation.d, m_nextIp);
-		m_nextIp = m_registers[m_currentInstruction.s];
+		setReg(m_instruction.d, m_nextIp);
+		m_nextIp = m_registers[m_instruction.s];
 		m_isBranching = true;
 	}
 
 	void CPU::opADDU()
 	{
-		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] + m_registers[m_currentInstruction.t]);
+		setReg(m_instruction.d, m_registers[m_instruction.s] + m_registers[m_instruction.t]);
 	}
 
 	void CPU::opAND()
 	{
-		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] & m_registers[m_currentInstruction.t]);
+		setReg(m_instruction.d, m_registers[m_instruction.s] & m_registers[m_instruction.t]);
 	}
 
 	void CPU::opANDI()
 	{
-		setReg(m_currentInstruction.t, m_registers[m_currentInstruction.s] & m_currentInstruction.imm);
+		setReg(m_instruction.t, m_registers[m_instruction.s] & m_instruction.imm);
 	}
 
 	void CPU::opBNE()
 	{
-		if (m_registers[m_currentInstruction.s] != m_registers[m_currentInstruction.t])
+		if (m_registers[m_instruction.s] != m_registers[m_instruction.t])
 		{
-			branch(m_currentInstruction.imm);
+			branch(m_instruction.imm_se);
 		}
 	}
 
 	void CPU::opBEQ()
 	{
-		if (m_registers[m_currentInstruction.s] == m_registers[m_currentInstruction.t])
+		if (m_registers[m_instruction.s] == m_registers[m_instruction.t])
 		{
-			branch(m_currentInstruction.imm);
+			branch(m_instruction.imm_se);
 		}
 	}
 
 	void CPU::opBGEZ()
 	{
-		if (static_cast<int32_t>(m_registers[m_currentInstruction.s]) >= 0)
+		int32_t s = static_cast<int32_t>(m_registers[m_instruction.s]);
+		if (s >= 0)
 		{
-			branch(m_currentInstruction.imm);
+			branch(m_instruction.imm_se);
 		}
 	}
 
 	void CPU::opBGEZAL()
 	{
-		if (static_cast<int32_t>(m_registers[m_currentInstruction.s]) >= 0)
+		int32_t s = static_cast<int32_t>(m_registers[m_instruction.s]);
+		if (s >= 0)
 		{
 			setReg(31, m_nextIp);
-			branch(m_currentInstruction.imm);
+			branch(m_instruction.imm_se);
 		}
 	}
 
 	void CPU::opBGTZ()
 	{
-		if (static_cast<int32_t>(m_registers[m_currentInstruction.s]) > 0)
+		int32_t s = static_cast<int32_t>(m_registers[m_instruction.s]);
+		if (s > 0)
 		{
-			branch(m_currentInstruction.imm);
+			branch(m_instruction.imm_se);
 		}
 	}
 
 	void CPU::opBLEZ()
 	{
-		if (static_cast<int32_t>(m_registers[m_currentInstruction.s]) <= 0)
+		int32_t s = static_cast<int32_t>(m_registers[m_instruction.s]);
+		if (s <= 0)
 		{
-			branch(m_currentInstruction.imm);
+			branch(m_instruction.imm_se);
 		}
 	}
 
 	void CPU::opBLTZ()
 	{
-		if (static_cast<int32_t>(m_registers[m_currentInstruction.s]) < 0)
+		int32_t s = static_cast<int32_t>(m_registers[m_instruction.s]);
+		if (s < 0)
 		{
-			branch(m_currentInstruction.imm);
+			branch(m_instruction.imm_se);
 		}
 	}
 
 	void CPU::opBLTZAL()
 	{
-		if (static_cast<int32_t>(m_registers[m_currentInstruction.s]) < 0)
+		int32_t s = static_cast<int32_t>(m_registers[m_instruction.s]);
+		if (s < 0)
 		{
 			setReg(31, m_nextIp);
-			branch(m_currentInstruction.imm);
+			branch(m_instruction.imm_se);
 		}
 	}
 
 	void CPU::opADDIU()
 	{
-		setReg(m_currentInstruction.t, m_registers[m_currentInstruction.s] + m_currentInstruction.imm);
+		setReg(m_instruction.t, m_registers[m_instruction.s] + m_instruction.imm_se);
 	}
 
 	void CPU::opADD()
 	{
-		uint32_t result = 0;
-		if (!safeAdd(m_registers[m_currentInstruction.s], m_currentInstruction.imm, result))
+		int32_t s = static_cast<int32_t>(m_registers[m_instruction.s]);
+		int32_t t = static_cast<int32_t>(m_registers[m_instruction.t]);
+		int32_t result = s + t;
+
+		if (isAddOverflow(s, t, result))
 		{
 			exception(Exception::Overflow);
 		}
 		else
 		{
-			setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.s] + m_registers[m_currentInstruction.t]);
+			setReg(m_instruction.d, result);
 		}
 	}
 
 	void CPU::opADDI()
 	{
-		uint32_t result = 0;
-		if (!safeAdd(m_registers[m_currentInstruction.s], m_currentInstruction.imm, result))
+		int32_t s = static_cast<int32_t>(m_registers[m_instruction.s]);
+		int32_t result = s + m_instruction.imm_se;
+
+		if (isAddOverflow(s, m_instruction.imm_se, result))
 		{
 			exception(Exception::Overflow);
 		}
 		else
 		{
-			setReg(m_currentInstruction.t, result);
+			setReg(m_instruction.t, result);
 		}
 	}
 
 	void CPU::opSLL()
 	{
-		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.t] << m_currentInstruction.SubOperation.h);
+		setReg(m_instruction.d, m_registers[m_instruction.t] << m_instruction.h);
 	}
 
 	void CPU::opSLLV()
 	{
-		setReg(m_currentInstruction.SubOperation.d, m_registers[m_currentInstruction.t] << m_registers[m_currentInstruction.s]);
+		auto shiftCount = m_registers[m_instruction.s] & 0x1f;
+		setReg(m_instruction.d, m_registers[m_instruction.t] << shiftCount);
 	}
 
 	void CPU::opMFHI()
 	{
-		setReg(m_currentInstruction.SubOperation.d, m_HI);
+		setReg(m_instruction.d, m_HI);
 	}
 
 	void CPU::opMFLO()
 	{
-		setReg(m_currentInstruction.SubOperation.d, m_LO);
+		setReg(m_instruction.d, m_LO);
 	}
 
 	void CPU::opMTHI()
 	{
-		m_HI = m_registers[m_currentInstruction.s];
+		m_HI = m_registers[m_instruction.s];
 	}
 
 	void CPU::opMTLO()
 	{
-		m_LO = m_registers[m_currentInstruction.s];
+		m_LO = m_registers[m_instruction.s];
 	}
 
 	void CPU::opMULT()
 	{
-		auto s = static_cast<int32_t>(m_registers[m_currentInstruction.s]);
-		auto t = static_cast<int32_t>(m_registers[m_currentInstruction.t]);
-		m_LO = s * t;
+		int64_t s = static_cast<int32_t>(m_registers[m_instruction.s]);
+		int64_t t = static_cast<int32_t>(m_registers[m_instruction.t]);
+		uint64_t result = s * t;
+
+		m_LO = static_cast<uint32_t>(result);
+		m_HI = static_cast<uint32_t>(result >> 32);
 	}
 
 	void CPU::opMULTU()
 	{
-		m_LO = m_registers[m_currentInstruction.s] * m_registers[m_currentInstruction.t];
+		uint64_t s = m_registers[m_instruction.s];
+		uint64_t t = m_registers[m_instruction.t];
+		uint64_t result = s * t;
+
+		m_HI = static_cast<uint32_t>(result >> 32);
+		m_LO = static_cast<uint32_t>(result);
 	}
 
 	void CPU::opSH()
@@ -634,10 +776,10 @@ namespace ePugStation
 			std::cout << "Ignoring store while cache is isolated...\n";
 			return;
 		}
-		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
+		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
 		if (checkIfAlignedBy<ALIGNED_FOR_16_BITS>(address))
 		{
-			store16(address, m_registers[m_currentInstruction.t]);
+			store16(address, m_registers[m_instruction.t]);
 		}
 		else
 		{
@@ -652,8 +794,8 @@ namespace ePugStation
 			std::cout << "Ignoring store while cache is isolated...\n";
 			return;
 		}
-		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
-		store8(address, 0xff & m_registers[m_currentInstruction.t]);
+		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
+		store8(address, 0xff & m_registers[m_instruction.t]);
 	}
 
 	void CPU::opSW()
@@ -663,10 +805,10 @@ namespace ePugStation
 			std::cout << "Ignoring store while cache is isolated...\n";
 			return;
 		}
-		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
+		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
 		if (checkIfAlignedBy<ALIGNED_FOR_32_BITS>(address))
 		{
-			store32(address, m_registers[m_currentInstruction.t]);
+			store32(address, m_registers[m_instruction.t]);
 		}
 		else
 		{
@@ -681,15 +823,94 @@ namespace ePugStation
 			std::cout << "Ignoring load while cache is isolated...\n";
 			return;
 		}
-		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
+		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
 		if (checkIfAlignedBy<ALIGNED_FOR_32_BITS>(address))
 		{
-			m_loadPair = { m_currentInstruction.t, load32(address) };
+			m_loadPair = { m_instruction.t, load32(address) };
 		}
 		else
 		{
 			exception(Exception::LoadAddressError);
 		}
+	}
+
+	// Store Word left
+	void CPU::opSWL()
+	{
+		auto address = m_registers[m_instruction.s] + m_instruction.imm_se;
+		auto t = m_outputRegisters[m_instruction.t];
+
+		auto alignedAddress = address & !3;
+		auto currentMem = load32(alignedAddress);
+
+		uint32_t newMem = 0;
+		switch (address & 3)
+		{
+		case 0: newMem = (currentMem & 0xffffff00) | (t >> 24); break;
+		case 1: newMem = (currentMem & 0xffff0000) | (t >> 16); break;
+		case 2: newMem = (currentMem & 0xff000000) | (t >> 8); break;
+		case 3: newMem = (currentMem & 0x00000000) | t; break;
+		}
+		store32(address, newMem);
+	}
+
+	// Store Word right
+	void CPU::opSWR()
+	{
+		auto address = m_registers[m_instruction.s] + m_instruction.imm_se;
+		auto t = m_outputRegisters[m_instruction.t];
+
+		auto alignedAddress = address & !3;
+		auto currentMem = load32(alignedAddress);
+
+		uint32_t newMem = 0;
+		switch (address & 3)
+		{
+		case 0: newMem = (currentMem & 0x00000000) | t; break;
+		case 1: newMem = (currentMem & 0x000000ff) | (t << 8); break;
+		case 2: newMem = (currentMem & 0x0000ffff) | (t << 16); break;
+		case 3: newMem = (currentMem & 0x00ffffff) | (t << 24); break;
+		}
+		store32(address, newMem);
+	}
+
+	// Load Word left
+	void CPU::opLWL()
+	{
+		auto address = m_registers[m_instruction.s] + m_instruction.imm_se;
+		auto currentT = m_outputRegisters[m_instruction.t];
+
+		auto alignedAddress = address & !3;
+		auto alignedWord = load32(alignedAddress);
+		uint32_t result = 0;
+		switch (address & 3)
+		{
+		case 0: result = (currentT & 0x00ffffff) | (alignedWord << 24); break;
+		case 1: result = (currentT & 0x0000ffff) | (alignedWord << 16); break;
+		case 2: result = (currentT & 0x000000ff) | (alignedWord << 8); break;
+		case 3: result = (currentT & 0x00000000) | alignedWord; break;
+		}
+		m_loadPair = { m_instruction.t, result };
+	}
+
+	// Load Word right
+	void CPU::opLWR()
+	{
+		auto address = m_registers[m_instruction.s] + m_instruction.imm_se;
+
+		auto curV = m_outputRegisters[m_instruction.t];
+
+		auto alignedAddress = address & !3;
+		auto alignedWord = load32(alignedAddress);
+		uint32_t result = 0;
+		switch (address & 3)
+		{
+		case 0: result = (curV & 0x00000000) | alignedWord; break;
+		case 1: result = (curV & 0xff000000) | (alignedWord >> 8); break;
+		case 2: result = (curV & 0xffff0000) | (alignedWord >> 16); break;
+		case 3: result = (curV & 0xffffff00) | (alignedWord >> 24); break;
+		}
+		m_loadPair = { m_instruction.t, result };
 	}
 
 	void CPU::opLB()
@@ -699,9 +920,9 @@ namespace ePugStation
 			std::cout << "Ignoring load while cache is isolated...\n";
 			return;
 		}
-		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
+		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
 		int8_t loadValue = load8(address);
-		m_loadPair = { m_currentInstruction.t, static_cast<uint32_t>(loadValue) };
+		m_loadPair = { m_instruction.t, static_cast<uint32_t>(loadValue) };
 	}
 
 	void CPU::opLBU()
@@ -711,8 +932,8 @@ namespace ePugStation
 			std::cout << "Ignoring load while cache is isolated...\n";
 			return;
 		}
-		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
-		m_loadPair = { m_currentInstruction.t, load8(address) };
+		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
+		m_loadPair = { m_instruction.t, load8(address) };
 	}
 
 	void CPU::opLH()
@@ -722,10 +943,29 @@ namespace ePugStation
 			std::cout << "Ignoring load while cache is isolated...\n";
 			return;
 		}
-		uint32_t address = m_registers[m_currentInstruction.s] + m_currentInstruction.imm;
+		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
 		if (checkIfAlignedBy<ALIGNED_FOR_16_BITS>(address))
 		{
-			m_loadPair = { m_currentInstruction.t, load16(address) };
+			int16_t loadValue = load16(address);
+			m_loadPair = { m_instruction.t, static_cast<uint32_t>(loadValue) };
+		}
+		else
+		{
+			exception(Exception::LoadAddressError);
+		}
+	}
+
+	void CPU::opLHU()
+	{
+		if (m_cop0.sr.Isc == 1)
+		{
+			std::cout << "Ignoring load while cache is isolated...\n";
+			return;
+		}
+		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
+		if (checkIfAlignedBy<ALIGNED_FOR_16_BITS>(address))
+		{
+			m_loadPair = { m_instruction.t, load16(address) };
 		}
 		else
 		{
@@ -735,7 +975,7 @@ namespace ePugStation
 
 	void CPU::opLUI()
 	{
-		setReg(m_currentInstruction.t, (m_currentInstruction.imm << 16));
+		setReg(m_instruction.t, (m_instruction.imm << 16));
 	}
 
 	void CPU::exception(Exception exception)

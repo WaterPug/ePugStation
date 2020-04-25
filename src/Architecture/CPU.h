@@ -76,10 +76,13 @@ namespace ePugStation
 
 	enum Exception
 	{
+		Break = 0x9, // Break operation
 		SysCall = 0x8, // Syscall operation
 		Overflow = 0xc, // Arithmetic overflow
-		LoadAddressError = 0x4, 
-		StoreAddressError = 0x5
+		LoadAddressError = 0x4,
+		StoreAddressError = 0x5,
+		CoprocessorError = 0xb,
+		IllegalInstruction = 0xa
 	};
 
 	class CPU
@@ -90,9 +93,13 @@ namespace ePugStation
 
 		void runNextInstruction();
 	private:
+
+		// Debugging purposes
+		int debugLineCounter = 0;
+
 		Cop0 m_cop0;
 
-		Instruction m_currentInstruction;
+		Instruction m_instruction;
 
 		uint32_t m_ip;
 		uint32_t m_currentIp;
@@ -164,8 +171,11 @@ namespace ePugStation
 		void opLB();
 		void opLBU();
 		void opLH();
+		void opLHU();
 		void opLUI();
 		void opLW();
+		void opLWL();
+		void opLWR();
 
 		// Move
 		void opMFHI();
@@ -185,6 +195,8 @@ namespace ePugStation
 		void opSB();
 		void opSW();
 		void opSH();
+		void opSWL();
+		void opSWR();
 
 		// Shift
 		void opSLL();
@@ -198,6 +210,7 @@ namespace ePugStation
 
 		// Shift right
 		void opSRA();
+		void opSRAV();
 		void opSRL();
 		void opSRLV();
 
@@ -208,15 +221,31 @@ namespace ePugStation
 		// XOR
 		void opXOR();
 		void opXORI();
+		void opNOR();
 
 		// SYSCALL
 		void opSYSCALL();
+		void opBREAK();
 
 		// Coprocessor operations
 		void opCop0();
+		void opCop1();
+		void opCop2();
+		void opCop3();
 		void opMFC();
 		void opMTC();
 		void opRFE();
+		void opLWC0();
+		void opLWC1();
+		void opLWC2();
+		void opLWC3();
+		void opSWC0();
+		void opSWC1();
+		void opSWC2();
+		void opSWC3();
+
+		// Illegal
+		void opIllegal();
 
 		void exception(Exception exception);
 	};
