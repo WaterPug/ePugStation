@@ -96,13 +96,12 @@ namespace ePugStation
 		}
 		else if (DMA_RANGE.contains(physicalAddress))
 		{
-			std::cout << "Unhandled DMA load32, ignoring...\n";
-			return 0;
+			return getDMAReg(physicalAddress);
 		}
 		else if (GPU_RANGE.contains(physicalAddress))
 		{
 			auto offset = GPU_RANGE.offset(physicalAddress);
-			return (offset == 4) ? 0x10000000 : 0;
+			return (offset == 4) ? 0x1c000000 : 0;
 		}
 
 		throw std::runtime_error("unhandled interconnect load address..." + std::to_string(physicalAddress));
@@ -194,7 +193,7 @@ namespace ePugStation
 		}
 		else if (DMA_RANGE.contains(physicalAddress))
 		{
-			std::cout << "Unhandled DMA store, ignoring...\n";
+			setDMAReg(physicalAddress, value);
 		}
 		else if (GPU_RANGE.contains(physicalAddress))
 		{
@@ -208,5 +207,177 @@ namespace ePugStation
 		{
 			throw std::runtime_error("Unhandled store..." + std::to_string(physicalAddress));
 		}
+	}
+
+	uint32_t Interconnect::getDMAReg(uint32_t address) const
+	{
+		uint32_t offset = DMA_RANGE.offset(address);
+
+		uint32_t major = (offset & 0x70) >> 4;
+		uint32_t minor = offset & 0xf;
+
+		if (major < 7)
+		{
+			if (minor == 0)
+			{
+				return m_dma.getChannelBaseAddress(major);
+			}
+			else if (minor == 4)
+			{
+				return m_dma.getChannelBlockControl(major);
+			}
+			if (minor == 8)
+			{
+				return m_dma.getChannelControl(major);
+			}
+		}
+		else if (major == 7)
+		{
+			if (minor == 0)
+			{
+				return m_dma.getControl();
+			}
+			else if (minor == 4)
+			{
+				return m_dma.getInterrupt();
+			}
+		}
+		throw std::runtime_error("Unhandled DMA access");
+	}
+
+	void Interconnect::executeDMATransfer(uint32_t index)
+	{
+		auto channel = m_dma.getChannel(index);
+
+		if (channel.control.syncMode == 2) // TODO: Make enum for these
+		{
+			linkedListCopyDMA(index);
+		}
+		else
+		{
+			blockCopyDMA(index);
+		}
+	}
+
+	void Interconnect::linkedListCopyDMA(uint32_t index)
+	{
+		auto channel = m_dma.getChannel(index);
+		uint32_t address = channel.baseAddress;
+		if (channel.control.transferDirection == 0) // to ram
+		{
+			throw std::runtime_error("Invalid direction for linked list mode");
+		}
+		// For now only GPU supported (to validate if linked list is used for other than the GPU
+		if (index != 2)
+		{
+			throw std::runtime_error("Linked list only implemented for GPU");
+		}
+
+		while(true)
+		{
+			uint32_t header = m_ram.load32(address);
+			uint32_t transferSize = header >> 24;
+			while (transferSize > 0)
+			{
+				address = (address + 4) & 0x1ffffc;
+				uint32_t command = m_ram.load32(address);
+				std::cout << "GPU command" << command << "\n";
+				--transferSize;
+			}
+
+			// Hardware seems to only check MSB (To validate)
+			if ((header & 0x800000) != 0)
+			{
+				break;
+			}
+		}
+		channel.finalizeCopy();
+	}
+
+	void Interconnect::blockCopyDMA(uint32_t index)
+	{
+		auto channel = m_dma.getChannel(index);
+		int32_t increment = channel.control.memoryAddressStep ? -4 : 4; // 1 == back, 0 == forward
+
+		uint32_t address = channel.baseAddress;
+		uint32_t transferSize = channel.getTransferSize();
+
+		while (transferSize > 0)
+		{
+			uint32_t currentAddress = address & 0x1ffffc; // Masking hypothesis : RAM address wraps and two LSB are ignored
+			uint32_t srcWord = 0;
+			if (channel.control.transferDirection == 0) // To ram
+			{
+				if (index == 6)
+				{
+					srcWord = transferSize == 1 ? 0xffffff : ((address - 4) & 0x1fffff);
+				}
+				else
+				{
+					throw std::runtime_error("Unhandled DMA channel port");
+				}
+				m_ram.store32(currentAddress, srcWord);
+			}
+			else // From ram
+			{
+				srcWord = m_ram.load32(currentAddress);
+				if (index == 2)
+				{
+					std::cout << "GPU command" << srcWord << "\n";
+				}
+				else
+				{
+					throw std::runtime_error("Unhandled DMA channel port");
+				}
+			}
+			address += increment;
+			--transferSize;
+		}
+		channel.finalizeCopy();
+	}
+
+	void Interconnect::setDMAReg(uint32_t address, uint32_t value)
+	{
+		uint32_t offset = DMA_RANGE.offset(address);
+
+		uint32_t major = (offset & 0x70) >> 4;
+		uint32_t minor = offset & 0xf;
+
+		if (major < 7)
+		{
+			if (minor == 0)
+			{
+				m_dma.setChannelBaseAddress(major, value);
+				return;
+			}
+			else if (minor == 4)
+			{
+				m_dma.setChannelBlockControl(major, value);
+			}
+			else if (minor == 8)
+			{
+				m_dma.setChannelControl(major, value);
+				return;
+			}
+
+			if (m_dma.isChannelActive(major))
+			{
+
+			}
+		}
+		else if (major == 7)
+		{
+			if (minor == 0)
+			{
+				m_dma.setControl(value);
+				return;
+			}
+			else if (minor == 4)
+			{
+				m_dma.setInterrupt(value);
+				return;
+			}
+		}
+		throw std::runtime_error("Unhandled DMA access");
 	}
 }

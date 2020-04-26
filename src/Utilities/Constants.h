@@ -67,6 +67,7 @@ namespace ePugStation
 	constexpr uint32_t DMA_START = 0x1f801080;
 	constexpr uint32_t DMA_SIZE = 128;
 	constexpr Range<DMA_START, DMA_SIZE> DMA_RANGE;
+	constexpr uint32_t DMA_RESET = 0x07654321; // Reset value from Nocash PSX spec
 
 	// GPU
 	constexpr uint32_t GPU_START = 0x1f801810;

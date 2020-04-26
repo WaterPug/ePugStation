@@ -43,10 +43,6 @@ namespace ePugStation
 			return;
 		}
 
-		if (debugLineCounter > 19000000)
-		{
-			std::cout << "Current ip = " << std::hex << m_currentIp;
-		}
 		std::cout << ". Line counter : " << std::to_string(debugLineCounter) << "\n";
 		// Point IP to next instruction
 		m_nextIp += 4;

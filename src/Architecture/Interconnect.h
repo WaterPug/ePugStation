@@ -3,6 +3,7 @@
 
 #include "BIOS.h"
 #include "Ram.h"
+#include "DMA.h"
 
 namespace ePugStation
 {
@@ -20,8 +21,16 @@ namespace ePugStation
 		void store32(uint32_t address, uint32_t value);
 
 	private:
+		uint32_t getDMAReg(uint32_t address) const;
+		void setDMAReg(uint32_t address, uint32_t value);
+
+		void executeDMATransfer(uint32_t index);
+		void blockCopyDMA(uint32_t index);
+		void linkedListCopyDMA(uint32_t index);
+
 		BIOS m_bios;
 		Ram m_ram;
+		DMA m_dma;
 	};
 }
 #endif
