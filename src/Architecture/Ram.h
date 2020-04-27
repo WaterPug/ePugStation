@@ -21,7 +21,7 @@ namespace ePugStation
 		void store32(uint32_t offset, uint32_t value);
 
 	private:
-		std::unique_ptr<std::array<std::byte, RAM_SIZE>> m_data; // unique_ptr to allocate on heap
+		std::array<uint8_t, RAM_SIZE> m_data;
 	};
 }
 #endif

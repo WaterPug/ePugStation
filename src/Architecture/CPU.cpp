@@ -2,7 +2,6 @@
 #include <Utilities/OpUtilities.h>
 #include <Utilities/Utils.h>
 #include <iostream>
-#include <iomanip>
 
 namespace ePugStation
 {
@@ -43,7 +42,7 @@ namespace ePugStation
 			return;
 		}
 
-		std::cout << ". Line counter : " << std::to_string(debugLineCounter) << "\n";
+		//std::cout << ". Line counter : " << std::to_string(debugLineCounter) << "\n";
 		// Point IP to next instruction
 		m_nextIp += 4;
 		setReg(m_loadPair);
@@ -239,8 +238,7 @@ namespace ePugStation
 
 	void CPU::setReg(std::pair<uint32_t, uint32_t> setRegPair)
 	{
-		m_outputRegisters[setRegPair.first] = setRegPair.second;
-		m_outputRegisters[0] = 0;
+		setReg(setRegPair.first, setRegPair.second);
 	}
 
 	void CPU::branch(uint32_t offset)
@@ -769,7 +767,6 @@ namespace ePugStation
 	{
 		if (m_cop0.sr.Isc == 1)
 		{
-			std::cout << "Ignoring store while cache is isolated...\n";
 			return;
 		}
 		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
@@ -787,7 +784,6 @@ namespace ePugStation
 	{
 		if (m_cop0.sr.Isc == 1)
 		{
-			std::cout << "Ignoring store while cache is isolated...\n";
 			return;
 		}
 		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
@@ -798,7 +794,6 @@ namespace ePugStation
 	{
 		if (m_cop0.sr.Isc == 1)
 		{
-			std::cout << "Ignoring store while cache is isolated...\n";
 			return;
 		}
 		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
@@ -816,7 +811,6 @@ namespace ePugStation
 	{
 		if (m_cop0.sr.Isc == 1)
 		{
-			std::cout << "Ignoring load while cache is isolated...\n";
 			return;
 		}
 		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
@@ -913,7 +907,6 @@ namespace ePugStation
 	{
 		if (m_cop0.sr.Isc == 1)
 		{
-			std::cout << "Ignoring load while cache is isolated...\n";
 			return;
 		}
 		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
@@ -925,7 +918,6 @@ namespace ePugStation
 	{
 		if (m_cop0.sr.Isc == 1)
 		{
-			std::cout << "Ignoring load while cache is isolated...\n";
 			return;
 		}
 		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
@@ -936,7 +928,6 @@ namespace ePugStation
 	{
 		if (m_cop0.sr.Isc == 1)
 		{
-			std::cout << "Ignoring load while cache is isolated...\n";
 			return;
 		}
 		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
@@ -955,7 +946,6 @@ namespace ePugStation
 	{
 		if (m_cop0.sr.Isc == 1)
 		{
-			std::cout << "Ignoring load while cache is isolated...\n";
 			return;
 		}
 		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;

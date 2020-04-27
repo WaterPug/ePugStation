@@ -74,6 +74,11 @@ namespace ePugStation
 	constexpr uint32_t GPU_SIZE = 8;
 	constexpr Range<GPU_START, GPU_SIZE> GPU_RANGE;
 
+	// CDROM
+	constexpr uint32_t CDROM_START = 0x1f801800;
+	constexpr uint32_t CDROM_SIZE = 4;
+	constexpr Range<CDROM_START, CDROM_SIZE> CDROM_RANGE;
+
 	// General uses
 	constexpr uint32_t ALIGNED_FOR_32_BITS = 4;
 	constexpr uint32_t ALIGNED_FOR_16_BITS = 2;

@@ -10,7 +10,11 @@ namespace ePugStation
 	class Interconnect
 	{
 	public:
-		Interconnect() = default;
+		Interconnect() 
+		{ 
+			m_bios = std::make_unique<BIOS>();  
+			m_ram = std::make_unique<Ram>();
+		};
 		~Interconnect() = default;
 
 		uint8_t load8(uint32_t address) const;
@@ -28,8 +32,8 @@ namespace ePugStation
 		void blockCopyDMA(uint32_t index);
 		void linkedListCopyDMA(uint32_t index);
 
-		BIOS m_bios;
-		Ram m_ram;
+		std::unique_ptr<BIOS> m_bios;
+		std::unique_ptr<Ram> m_ram;
 		DMA m_dma;
 	};
 }

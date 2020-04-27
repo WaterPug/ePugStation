@@ -5,6 +5,32 @@
 
 namespace ePugStation
 {
+	enum class SyncMode : uint8_t
+	{
+		Manual = 0,
+		Sync = 1,
+		LinkedList = 2,
+		Other = 3
+	};
+
+	enum class StepDirection : uint8_t
+	{
+		Forward = 0,
+		Backward = 1
+	};
+
+	enum class DMATransferDirection : uint8_t
+	{
+		ToRam = 0,
+		FromRam = 1
+	};
+
+	enum class StartTrigger : uint8_t
+	{
+		Normal = 0,
+		Manual = 1
+	};
+
 	struct DMABlockChannel
 	{
 		union
@@ -21,12 +47,6 @@ namespace ePugStation
 				uint16_t blockSize : 16;
 				uint16_t amountOfBlocks : 16;
 			}SyncMode1;
-
-			struct
-			{
-				uint32_t unused : 32;
-			}SyncMode2;
-
 		};
 	};
 
@@ -59,11 +79,11 @@ namespace ePugStation
 			uint32_t value;
 			struct // See http://problemkaputt.de/psx-spx.htm#dmachannels for definitions
 			{
-				uint8_t transferDirection : 1; // 0 == to ram, 1 == from ram
-				uint8_t memoryAddressStep : 1;
+				DMATransferDirection isFromRam : 1;
+				StepDirection memoryAddressStep : 1;
 				uint8_t unused1 : 6;
 				bool choppingEnable : 1;
-				uint8_t syncMode : 2; // 0 == Starts when trigger is enabled (manual start), 1 == Sync blocks, 2 == Linked-List mode
+				SyncMode syncMode : 2;
 				uint8_t unused2 : 5;
 				uint8_t choppingDMAWindowSize : 3;
 				bool unused3 : 1;
@@ -71,9 +91,17 @@ namespace ePugStation
 				bool unused4 : 1;
 				bool enable : 1;
 				uint8_t unused5 : 3;
-				bool startTrigger : 1; // 0 == normal, 1 == manual start
+				StartTrigger startTrigger : 1; // 0 == normal, 1 == manual start
 				uint8_t unknown : 3;
 			};
+		};
+	};
+
+	struct DMABaseAddress
+	{
+		union {
+			uint32_t value;
+			uint32_t address : 24;
 		};
 	};
 
@@ -85,25 +113,19 @@ namespace ePugStation
 
 		uint32_t getTransferSize()
 		{
-			if (control.syncMode == 0) // Manual
+			if (control.syncMode == SyncMode::Manual)
 			{
 				return blockChannel.SyncMode0.numberOfWords;
 			}
-			else if (control.syncMode == 1) // Request
+			else if (control.syncMode == SyncMode::Sync)
 			{
 				return blockChannel.SyncMode1.amountOfBlocks * blockChannel.SyncMode1.blockSize;
 			}
-			else
+			else if (control.syncMode == SyncMode::LinkedList)
 			{
 				throw std::runtime_error("Linked not supported");
 				//return 0xffffff;
 			}
-		}
-
-		void finalizeCopy()
-		{
-			control.enable = false;
-			control.startTrigger = false;
 		}
 	};
 
@@ -130,8 +152,18 @@ namespace ePugStation
 
 		bool isChannelActive(uint32_t index) const 
 		{ 
-			bool trigger = m_channels[index].control.syncMode == 0 ? m_channels[index].control.startTrigger : true;
+			bool trigger = true;
+			if (m_channels[index].control.syncMode == SyncMode::Manual)
+			{
+				trigger = m_channels[index].control.startTrigger == StartTrigger::Manual;
+			}
 			return trigger && m_channels[index].control.enable;
+		}
+
+		void finalizeCopy(uint32_t index)
+		{
+			m_channels[index].control.enable = false;
+			m_channels[index].control.startTrigger = StartTrigger::Normal;
 		}
 
 		DMAChannel getChannel(uint32_t index) { return m_channels[index]; };

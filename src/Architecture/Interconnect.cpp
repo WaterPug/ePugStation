@@ -25,13 +25,14 @@ namespace
 
 namespace ePugStation
 {
+
 	uint8_t Interconnect::load8(uint32_t address) const
 	{
 		uint32_t physicalAddress = maskRegion(address);
 
 		if (BIOS_RANGE_PHYSICAL.contains(physicalAddress))
 		{
-			return m_bios.load8(BIOS_RANGE_PHYSICAL.offset(physicalAddress));
+			return m_bios->load8(BIOS_RANGE_PHYSICAL.offset(physicalAddress));
 		}
 		else if (EXPANSION_1_RANGE.contains(physicalAddress))
 		{
@@ -45,7 +46,12 @@ namespace ePugStation
 		}
 		else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
 		{
-			return m_ram.load8(RAM_RANGE_PHYSICAL.offset(physicalAddress));
+			return m_ram->load8(RAM_RANGE_PHYSICAL.offset(physicalAddress));
+		}
+		else if (CDROM_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled CDROM load 8, ignoring...\n";
+			return 0;
 		}
 		else
 		{
@@ -59,12 +65,12 @@ namespace ePugStation
 
 		if (SPU_RANGE.contains(physicalAddress))
 		{
-			std::cout << "Unhandled SPU load16, ignoring...\n";
+			//std::cout << "Unhandled SPU load16, ignoring...\n";
 			return 0;
 		}
 		else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
 		{
-			return m_ram.load16(RAM_RANGE_PHYSICAL.offset(physicalAddress));
+			return m_ram->load16(RAM_RANGE_PHYSICAL.offset(physicalAddress));
 		}
 		else if (INTERRUPT_CONTROL_RANGE.contains(physicalAddress))
 		{
@@ -83,11 +89,11 @@ namespace ePugStation
 
 		if (BIOS_RANGE_PHYSICAL.contains(physicalAddress))
 		{
-			return m_bios.load32(BIOS_RANGE_PHYSICAL.offset(physicalAddress));
+			return m_bios->load32(BIOS_RANGE_PHYSICAL.offset(physicalAddress));
 		}
 		else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
 		{
-			return m_ram.load32(RAM_RANGE_PHYSICAL.offset(physicalAddress));
+			return m_ram->load32(RAM_RANGE_PHYSICAL.offset(physicalAddress));
 		}
 		else if (INTERRUPT_CONTROL_RANGE.contains(physicalAddress))
 		{
@@ -103,6 +109,11 @@ namespace ePugStation
 			auto offset = GPU_RANGE.offset(physicalAddress);
 			return (offset == 4) ? 0x1c000000 : 0;
 		}
+		else if (TIMERS_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled TIMERS load32, ignoring...\n";
+			return 0;
+		}
 
 		throw std::runtime_error("unhandled interconnect load address..." + std::to_string(physicalAddress));
 	}
@@ -117,7 +128,11 @@ namespace ePugStation
 		}
 		else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
 		{
-			m_ram.store8(RAM_RANGE_PHYSICAL.offset(physicalAddress), value);
+			m_ram->store8(RAM_RANGE_PHYSICAL.offset(physicalAddress), value);
+		}
+		else if (CDROM_RANGE.contains(physicalAddress))
+		{
+			std::cout << "Unhandled CDROM store8, ignoring...\n";
 		}
 		else
 		{
@@ -131,7 +146,7 @@ namespace ePugStation
 
 		if (SPU_RANGE.contains(physicalAddress))
 		{
-			std::cout << "Unhandled SPU store16, ignoring...\n";
+			//std::cout << "Unhandled SPU store16, ignoring...\n";
 		}
 		else if (TIMERS_RANGE.contains(physicalAddress))
 		{
@@ -139,7 +154,7 @@ namespace ePugStation
 		}
 		else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
 		{
-			return m_ram.store16(RAM_RANGE_PHYSICAL.offset(physicalAddress), value);
+			return m_ram->store16(RAM_RANGE_PHYSICAL.offset(physicalAddress), value);
 		}
 		else if (INTERRUPT_CONTROL_RANGE.contains(physicalAddress))
 		{
@@ -157,11 +172,11 @@ namespace ePugStation
 
 		if (BIOS_RANGE_PHYSICAL.contains(physicalAddress))
 		{
-			m_bios.store32(BIOS_RANGE_PHYSICAL.offset(physicalAddress), value);
+			m_bios->store32(BIOS_RANGE_PHYSICAL.offset(physicalAddress), value);
 		}
 		else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
 		{
-			m_ram.store32(RAM_RANGE_PHYSICAL.offset(physicalAddress), value);
+			m_ram->store32(RAM_RANGE_PHYSICAL.offset(physicalAddress), value);
 		}
 		else if (MEM_CONTROL_RANGE.contains(physicalAddress))
 		{
@@ -249,7 +264,7 @@ namespace ePugStation
 	{
 		auto channel = m_dma.getChannel(index);
 
-		if (channel.control.syncMode == 2) // TODO: Make enum for these
+		if (channel.control.syncMode == SyncMode::LinkedList)
 		{
 			linkedListCopyDMA(index);
 		}
@@ -262,8 +277,8 @@ namespace ePugStation
 	void Interconnect::linkedListCopyDMA(uint32_t index)
 	{
 		auto channel = m_dma.getChannel(index);
-		uint32_t address = channel.baseAddress;
-		if (channel.control.transferDirection == 0) // to ram
+		uint32_t address = channel.baseAddress & 0x1ffffc;
+		if (channel.control.isFromRam == DMATransferDirection::ToRam) // to ram
 		{
 			throw std::runtime_error("Invalid direction for linked list mode");
 		}
@@ -275,12 +290,12 @@ namespace ePugStation
 
 		while(true)
 		{
-			uint32_t header = m_ram.load32(address);
+			uint32_t header = m_ram->load32(address);
 			uint32_t transferSize = header >> 24;
 			while (transferSize > 0)
 			{
 				address = (address + 4) & 0x1ffffc;
-				uint32_t command = m_ram.load32(address);
+				uint32_t command = m_ram->load32(address);
 				std::cout << "GPU command" << command << "\n";
 				--transferSize;
 			}
@@ -290,14 +305,15 @@ namespace ePugStation
 			{
 				break;
 			}
+			address = header & 0x1ffffc;
 		}
-		channel.finalizeCopy();
+		m_dma.finalizeCopy(index);
 	}
 
 	void Interconnect::blockCopyDMA(uint32_t index)
 	{
 		auto channel = m_dma.getChannel(index);
-		int32_t increment = channel.control.memoryAddressStep ? -4 : 4; // 1 == back, 0 == forward
+		int32_t increment = channel.control.memoryAddressStep == StepDirection::Backward ? -4 : 4; // 1 == back, 0 == forward
 
 		uint32_t address = channel.baseAddress;
 		uint32_t transferSize = channel.getTransferSize();
@@ -306,21 +322,21 @@ namespace ePugStation
 		{
 			uint32_t currentAddress = address & 0x1ffffc; // Masking hypothesis : RAM address wraps and two LSB are ignored
 			uint32_t srcWord = 0;
-			if (channel.control.transferDirection == 0) // To ram
+			if (channel.control.isFromRam == DMATransferDirection::ToRam)
 			{
 				if (index == 6)
 				{
-					srcWord = transferSize == 1 ? 0xffffff : ((address - 4) & 0x1fffff);
+					srcWord = transferSize == 1 ? 0xffffff : ((address - 4) & 0x1ffffc);
 				}
 				else
 				{
 					throw std::runtime_error("Unhandled DMA channel port");
 				}
-				m_ram.store32(currentAddress, srcWord);
+				m_ram->store32(currentAddress, srcWord);
 			}
-			else // From ram
+			else
 			{
-				srcWord = m_ram.load32(currentAddress);
+				srcWord = m_ram->load32(currentAddress);
 				if (index == 2)
 				{
 					std::cout << "GPU command" << srcWord << "\n";
@@ -333,7 +349,7 @@ namespace ePugStation
 			address += increment;
 			--transferSize;
 		}
-		channel.finalizeCopy();
+		m_dma.finalizeCopy(index);
 	}
 
 	void Interconnect::setDMAReg(uint32_t address, uint32_t value)
@@ -348,7 +364,6 @@ namespace ePugStation
 			if (minor == 0)
 			{
 				m_dma.setChannelBaseAddress(major, value);
-				return;
 			}
 			else if (minor == 4)
 			{
@@ -357,13 +372,13 @@ namespace ePugStation
 			else if (minor == 8)
 			{
 				m_dma.setChannelControl(major, value);
-				return;
 			}
 
 			if (m_dma.isChannelActive(major))
 			{
-
+				executeDMATransfer(major);
 			}
+			return;
 		}
 		else if (major == 7)
 		{

@@ -24,7 +24,7 @@ namespace ePugStation
 
 	private:
 		void loadBIOS();
-		std::unique_ptr<std::array<std::byte, BIOS_MEMORY_SIZE>> m_data; // unique_ptr to allocate on heap
+		std::array<uint8_t, BIOS_MEMORY_SIZE> m_data; // unique_ptr to allocate on heap
 	};
 }
 #endif
