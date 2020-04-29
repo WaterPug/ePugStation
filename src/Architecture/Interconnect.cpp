@@ -312,7 +312,7 @@ namespace ePugStation
 			{
 				address = (address + 4) & 0x1ffffc;
 				uint32_t command = m_ram->load32(address);
-				std::cout << "GPU command" << command << "\n";
+				m_gpu.setGP0Command(command);
 				--transferSize;
 			}
 

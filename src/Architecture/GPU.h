@@ -66,14 +66,14 @@ namespace ePugStation
 	{
 		VRAMDisplay() : value(0) {}
 		VRAMDisplay(uint32_t reg) : value(reg) {}
-		VRAMDisplay(uint16_t startX, uint16_t startY) : xStart(startX), yStart(startY) {}
+		VRAMDisplay(uint16_t startX, uint16_t startY) : value(0), xStart(startX), yStart(startY) {}
+		VRAMDisplay(const VRAMDisplay& vramDisplay) : value(0), xStart(vramDisplay.xStart), yStart(vramDisplay.yStart) {}
 		union
 		{
 			unsigned value;
 			struct {
 				unsigned xStart : 10;
 				unsigned yStart : 9;
-				unsigned empty : 13;
 			};
 		};
 	};
@@ -82,14 +82,14 @@ namespace ePugStation
 	{
 		HSyncDisplay() : value(0) {}
 		HSyncDisplay(uint32_t reg) : value(reg) {}
-		HSyncDisplay(uint16_t hStart, uint16_t hEnd) : start(hStart), end(hEnd) {}
+		HSyncDisplay(uint16_t hStart, uint16_t hEnd) : value(0), start(hStart), end(hEnd) {}
+		HSyncDisplay(const HSyncDisplay& hSyncDisplay) : value(0), start(hSyncDisplay.start), end(hSyncDisplay.end) {}
 		union
 		{
 			unsigned value;
 			struct {
 				unsigned start : 12;
 				unsigned end : 12;
-				unsigned empty : 8;
 			};
 		};
 	};
@@ -98,14 +98,14 @@ namespace ePugStation
 	{
 		VSyncDisplay() : value(0) {}
 		VSyncDisplay(uint32_t reg) : value(reg) {}
-		VSyncDisplay(uint16_t vStart, uint16_t vEnd) : start(vStart), end(vEnd) {}
+		VSyncDisplay(uint16_t vStart, uint16_t vEnd) : value(0), start(vStart), end(vEnd) {}
+		VSyncDisplay(const VSyncDisplay& vSyncDisplay) : value(0), start(vSyncDisplay.start), end(vSyncDisplay.end) {}
 		union
 		{
 			unsigned value;
 			struct {
 				unsigned start : 10;
 				unsigned end : 10;
-				unsigned empty : 12;
 			};
 		};
 	};
@@ -114,14 +114,14 @@ namespace ePugStation
 	{
 		DrawingCoordinate() : value(0) {}
 		DrawingCoordinate(uint32_t reg) : value(reg) {}
-		DrawingCoordinate(uint16_t x, uint16_t y) : xValue(x), yValue(y) {}
+		DrawingCoordinate(uint16_t x, uint16_t y) : value(0), xValue(x), yValue(y) {}
+		DrawingCoordinate(const DrawingCoordinate& drawingCoordinate) : value(0), xValue(drawingCoordinate.xValue), yValue(drawingCoordinate.yValue) {}
 		union
 		{
 			unsigned value;
 			struct {
 				unsigned xValue : 10;
 				unsigned yValue : 9;
-				unsigned empty : 13;
 			};
 		};
 	};
@@ -130,14 +130,14 @@ namespace ePugStation
 	{
 		DrawingOffset() : value(0) {}
 		DrawingOffset(uint32_t reg) : value(reg) {}
-		DrawingOffset(uint16_t x, uint16_t y) : xOffset(x), yOffset(y) {}
+		DrawingOffset(uint16_t x, uint16_t y) : value(0), xOffset(x), yOffset(y) {}
+		DrawingOffset(const DrawingOffset& drawingOffset) : value(0), xOffset(drawingOffset.xOffset), yOffset(drawingOffset.yOffset) {}
 		union
 		{
 			unsigned value;
 			struct {
-				unsigned xOffset : 11;
-				unsigned yOffset : 11;
-				unsigned empty : 10;
+				signed xOffset : 11;
+				signed yOffset : 11;
 			};
 		};
 	};
@@ -147,7 +147,13 @@ namespace ePugStation
 		TextureWindowSettings() : value(0) {}
 		TextureWindowSettings(uint32_t reg) : value(reg) {}
 		TextureWindowSettings(uint8_t maskX, uint8_t maskY, uint8_t offsetX, uint8_t offsetY) :
-			textureWindowMaskX(maskX), textureWindowMaskY(maskY), textureWindowOffsetX(offsetX), textureWindowOffsetY(offsetY) {}
+			value(0), textureWindowMaskX(maskX), textureWindowMaskY(maskY), textureWindowOffsetX(offsetX), textureWindowOffsetY(offsetY) {}
+		TextureWindowSettings(const TextureWindowSettings& drawingOffset) : 
+			value(0), 
+			textureWindowMaskX(drawingOffset.textureWindowMaskX), 
+			textureWindowMaskY(drawingOffset.textureWindowMaskY), 
+			textureWindowOffsetX(drawingOffset.textureWindowOffsetX),
+			textureWindowOffsetY(drawingOffset.textureWindowOffsetY) {}
 		union
 		{
 			uint32_t value;
@@ -157,7 +163,6 @@ namespace ePugStation
 				unsigned textureWindowMaskY : 5;
 				unsigned textureWindowOffsetX : 5;
 				unsigned textureWindowOffsetY : 5;
-				unsigned empty : 12;
 			};
 		};
 	};
@@ -398,6 +403,10 @@ namespace ePugStation
 			m_stat.displayDepth = displayDepth;
 			m_stat.isInterlaced = isInterlace;
 			m_stat.reverseFlag = reverseFlag;
+			if (reverseFlag == 1)
+			{
+				throw std::runtime_error("Reverse flag was enabled! TODO: Handle it");
+			}
 		}
 
 		void decodeAndExecuteGP0()
