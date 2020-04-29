@@ -12,6 +12,8 @@ namespace ePugStation
 		return m_data[offset];
 	}
 
+	// We assume that the offset is a multiple of 2 for load16 and multiple of 4 for load32
+	// Worst case this will load closest aligned data...
 	uint16_t Ram::load16(uint32_t offset) const
 	{
 		return static_cast<uint16_t>(((uint16_t*)(m_data.data()))[offset >> 1]);

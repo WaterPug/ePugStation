@@ -5,7 +5,7 @@
 
 namespace ePugStation
 {
-	enum class SyncMode : uint8_t
+	enum class SyncMode : unsigned
 	{
 		Manual = 0,
 		Sync = 1,
@@ -13,19 +13,19 @@ namespace ePugStation
 		Other = 3
 	};
 
-	enum class StepDirection : uint8_t
+	enum class StepDirection : unsigned
 	{
 		Forward = 0,
 		Backward = 1
 	};
 
-	enum class DMATransferDirection : uint8_t
+	enum class DMATransferDirection : unsigned
 	{
 		ToRam = 0,
 		FromRam = 1
 	};
 
-	enum class StartTrigger : uint8_t
+	enum class StartTrigger : unsigned
 	{
 		Normal = 0,
 		Manual = 1
@@ -59,13 +59,13 @@ namespace ePugStation
 			uint32_t value;
 			struct
 			{
-				uint8_t unknown : 6;
-				uint16_t unused : 9;
-				uint8_t forceIRQ : 1;
-				uint8_t IRQEnable : 7;
-				uint8_t IRQMasterEnable : 1;
-				uint8_t IRQFlags : 7;
-				uint8_t IRQMasterFlag : 1;
+				unsigned unknown : 6;
+				unsigned unused : 9;
+				unsigned forceIRQ : 1;
+				unsigned IRQEnable : 7;
+				unsigned IRQMasterEnable : 1;
+				unsigned IRQFlags : 7;
+				unsigned IRQMasterFlag : 1;
 			};
 		};
 	};
@@ -81,18 +81,18 @@ namespace ePugStation
 			{
 				DMATransferDirection isFromRam : 1;
 				StepDirection memoryAddressStep : 1;
-				uint8_t unused1 : 6;
-				bool choppingEnable : 1;
+				unsigned : 6;
+				unsigned choppingEnable : 1;
 				SyncMode syncMode : 2;
-				uint8_t unused2 : 5;
-				uint8_t choppingDMAWindowSize : 3;
-				bool unused3 : 1;
-				uint8_t choppingCPUWindowSize : 3;
-				bool unused4 : 1;
-				bool enable : 1;
-				uint8_t unused5 : 3;
+				unsigned : 5;
+				unsigned choppingDMAWindowSize : 3;
+				unsigned : 1;
+				unsigned choppingCPUWindowSize : 3;
+				unsigned : 1;
+				unsigned enable : 1;
+				unsigned : 3;
 				StartTrigger startTrigger : 1; // 0 == normal, 1 == manual start
-				uint8_t unknown : 3;
+				unsigned : 3;
 			};
 		};
 	};

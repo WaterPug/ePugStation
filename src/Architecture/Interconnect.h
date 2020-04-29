@@ -4,6 +4,7 @@
 #include "BIOS.h"
 #include "Ram.h"
 #include "DMA.h"
+#include "GPU.h"
 
 namespace ePugStation
 {
@@ -35,6 +36,7 @@ namespace ePugStation
 		std::unique_ptr<BIOS> m_bios;
 		std::unique_ptr<Ram> m_ram;
 		DMA m_dma;
+		GPU m_gpu;
 	};
 }
 #endif

@@ -107,7 +107,15 @@ namespace ePugStation
 		else if (GPU_RANGE.contains(physicalAddress))
 		{
 			auto offset = GPU_RANGE.offset(physicalAddress);
-			return (offset == 4) ? 0x1c000000 : 0;
+			if (offset == 0)
+			{
+				std::cout << "GPUREAD not implemented, ignoring...\n";
+				return 0;
+			}
+			else
+			{
+				return m_gpu.getGPUStat().value;
+			}
 		}
 		else if (TIMERS_RANGE.contains(physicalAddress))
 		{
@@ -212,7 +220,15 @@ namespace ePugStation
 		}
 		else if (GPU_RANGE.contains(physicalAddress))
 		{
-			std::cout << "Unhandled GPU store, ignoring...\n";
+			uint32_t offset = GPU_RANGE.offset(physicalAddress);
+			if (offset == 0)
+			{
+				m_gpu.setGP0Command(value);
+			}
+			else
+			{
+				m_gpu.setGP1Command(value);
+			}
 		}
 		else if (TIMERS_RANGE.contains(physicalAddress))
 		{
