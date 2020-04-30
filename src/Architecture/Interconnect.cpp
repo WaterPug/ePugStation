@@ -355,7 +355,7 @@ namespace ePugStation
 				srcWord = m_ram->load32(currentAddress);
 				if (index == 2)
 				{
-					std::cout << "GPU command" << srcWord << "\n";
+					m_gpu.setGP0Command(srcWord);
 				}
 				else
 				{

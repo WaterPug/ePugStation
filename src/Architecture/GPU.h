@@ -3,6 +3,9 @@
 
 #include "Utilities/Constants.h"
 #include <cstdint>
+#include <vector>
+#include <functional>
+#include <iostream>
 
 namespace ePugStation
 {
@@ -126,6 +129,38 @@ namespace ePugStation
 		};
 	};
 
+	struct RectangleCoordinate
+	{
+		RectangleCoordinate() : value(0) {}
+		RectangleCoordinate(uint32_t reg) : value(reg) {}
+		RectangleCoordinate(uint16_t x, uint16_t y) : value(0), xValue(x), yValue(y) {}
+		RectangleCoordinate(const RectangleCoordinate& rectangleCoordinate) : value(0), xValue(rectangleCoordinate.xValue), yValue(rectangleCoordinate.yValue) {}
+		union
+		{
+			unsigned value;
+			struct {
+				unsigned xValue : 16;
+				unsigned yValue : 16;
+			};
+		};
+	};
+
+	struct Rectangle
+	{
+		Rectangle() : value(0) {}
+		Rectangle(uint32_t reg) : value(reg) {}
+		Rectangle(uint16_t inWidth, uint16_t inHeight) : value(0), width(inWidth), height(inHeight) {}
+		Rectangle(const Rectangle& rectangle) : value(0), width(rectangle.width), height(rectangle.height) {}
+		union
+		{
+			unsigned value;
+			struct {
+				unsigned width : 16;
+				unsigned height : 16;
+			};
+		};
+	};
+
 	struct DrawingOffset
 	{
 		DrawingOffset() : value(0) {}
@@ -148,10 +183,10 @@ namespace ePugStation
 		TextureWindowSettings(uint32_t reg) : value(reg) {}
 		TextureWindowSettings(uint8_t maskX, uint8_t maskY, uint8_t offsetX, uint8_t offsetY) :
 			value(0), textureWindowMaskX(maskX), textureWindowMaskY(maskY), textureWindowOffsetX(offsetX), textureWindowOffsetY(offsetY) {}
-		TextureWindowSettings(const TextureWindowSettings& drawingOffset) : 
-			value(0), 
-			textureWindowMaskX(drawingOffset.textureWindowMaskX), 
-			textureWindowMaskY(drawingOffset.textureWindowMaskY), 
+		TextureWindowSettings(const TextureWindowSettings& drawingOffset) :
+			value(0),
+			textureWindowMaskX(drawingOffset.textureWindowMaskX),
+			textureWindowMaskY(drawingOffset.textureWindowMaskY),
 			textureWindowOffsetX(drawingOffset.textureWindowOffsetX),
 			textureWindowOffsetY(drawingOffset.textureWindowOffsetY) {}
 		union
@@ -209,6 +244,7 @@ namespace ePugStation
 		GP0() : value(0) {}
 		~GP0() = default;
 		GP0(uint32_t inValue) : value(inValue) {}
+		GP0(const GP0& gp0) : value(gp0.value) {}
 
 		union
 		{
@@ -226,11 +262,11 @@ namespace ePugStation
 				unsigned texturePageYBase : 1; // 4   (GPU STAT 4)
 				unsigned semiTransparency : 2; // 5-6 (GPU STAT 5-6)
 				TextureDepth textureDepth : 2; // 7-8 (GPU STAT 7-8)
-				unsigned dithering : 1;			   // 9   (GPU STAT 0)
-				unsigned drawToDisplay : 1;		   // 10  (GPU STAT 10)
-				unsigned textureDisabled : 1;	   // 11  (GPU STAT 15)
-				unsigned textureRectXFlip : 1;	   // 12 
-				unsigned textureRectYFlip : 1;	   // 13 (GPU STAT 13?) TBD
+				unsigned dithering : 1;		   // 9   (GPU STAT 0)
+				unsigned drawToDisplay : 1;	   // 10  (GPU STAT 10)
+				unsigned textureDisabled : 1;  // 11  (GPU STAT 15)
+				unsigned textureRectXFlip : 1; // 12 
+				unsigned textureRectYFlip : 1; // 13 (GPU STAT 13?) TBD
 				unsigned unused1 : 10;
 				unsigned cmd : 8;
 			}CMD_E1;
@@ -238,6 +274,9 @@ namespace ePugStation
 				unsigned useMaskBit : 1;
 				unsigned preserveMaskedPixels : 1;
 			}CMD_E6;
+
+			Rectangle rectangle;
+			RectangleCoordinate rectangleCoordinate;
 
 		};
 	};
@@ -285,7 +324,9 @@ namespace ePugStation
 		};
 		~GPU() = default;
 
-		GPUStat getGPUStat() const { return m_stat; }
+		// TODO: FIX THIS FUNCTION -- Hack for now since timing is not implemented yet
+		// Also temp variable to keep constness
+		GPUStat getGPUStat() const { GPUStat temp; temp.value = m_stat.value; temp.vRes = VerticalResolution::V240; return temp; }
 
 		void setGP0Command(uint32_t value)
 		{
@@ -311,6 +352,12 @@ namespace ePugStation
 		DrawingCoordinate m_drawingAreaTopLeft;
 		DrawingCoordinate m_drawingAreaBottomRight;
 		DrawingOffset m_drawingOffset;
+
+		int m_requestsMissing = 0;
+		std::function<void(void)> m_cmdFx;
+
+		// vector of GP0 values
+		std::vector<GP0> m_renderValues;
 
 		void decodeAndExecuteGP1()
 		{
@@ -355,7 +402,9 @@ namespace ePugStation
 		// gp1 : 0x01
 		void resetCommandBuffer()
 		{
-			// ??
+			// TODO: Clear the FIFO when implemented
+			m_requestsMissing = 0;
+			m_renderValues.clear();
 		}
 
 		// gp1 : 0x02
@@ -411,17 +460,113 @@ namespace ePugStation
 
 		void decodeAndExecuteGP0()
 		{
-			switch (m_gp0.command)
+			// Revisit logic of this to see for simpler solution.. Could assume that everything is in the vector, and simply need to call fx.. ? Removes need to switch on cmd again
+			if (m_requestsMissing > 1) // This case we simply push the value and wait for next command
 			{
-			case 0x00: break; // NOOP
-			case 0xE1: drawMode(m_gp0.CMD_E1.texturePageXBase, m_gp0.CMD_E1.texturePageYBase, m_gp0.CMD_E1.semiTransparency, m_gp0.CMD_E1.textureDepth, m_gp0.CMD_E1.dithering, m_gp0.CMD_E1.drawToDisplay, m_gp0.CMD_E1.textureDisabled); break;
-			case 0xE2: textureWindowSettings(m_gp0.windowSettings); break;
-			case 0xE3: setDrawingAreaTopLeft(m_gp0.drawingCoordinate); break;
-			case 0xE4: setDrawingAreaBottomRight(m_gp0.drawingCoordinate); break;
-			case 0xE5: setDrawingOffset(m_gp0.drawingOffset); break;
-			case 0xE6: setMaskBitSettings(m_gp0.CMD_E6.useMaskBit, m_gp0.CMD_E6.preserveMaskedPixels);  break;
-			default: throw("Unhandled GP0 command");
+				m_renderValues.push_back(m_gp0);
+				--m_requestsMissing;
 			}
+			else if (m_requestsMissing == 1) // This case we push the value and get cmd from first m_gp0
+			{
+				m_renderValues.push_back(m_gp0);
+				m_requestsMissing = 0;
+				m_cmdFx();
+				m_renderValues.clear();
+			}
+			else // Behave normally, since no multi operation was queued...
+			{
+				switch (m_gp0.command)
+				{
+				case 0x00: break; // NOOP
+				case 0x01: break;
+
+					// Monochrome polygon
+				case 0x20: m_renderValues.push_back(m_gp0); m_requestsMissing = 3; m_cmdFx = [&]() { renderMonochromePolygon<true, 3>(); }; break;
+				case 0x22: m_renderValues.push_back(m_gp0); m_requestsMissing = 3; m_cmdFx = [&]() { renderMonochromePolygon<false, 3>(); }; break;
+				case 0x28: m_renderValues.push_back(m_gp0); m_requestsMissing = 4; m_cmdFx = [&]() { renderMonochromePolygon<true, 4>(); }; break;
+				case 0x2A: m_renderValues.push_back(m_gp0); m_requestsMissing = 4; m_cmdFx = [&]() { renderMonochromePolygon<false, 4>(); }; break;
+
+					// Texture polygon
+				case 0x24: m_renderValues.push_back(m_gp0); m_requestsMissing = 6; m_cmdFx = [&]() { renderTexturedPolygon<true, true, 3>(); }; break;
+				case 0x25: m_renderValues.push_back(m_gp0); m_requestsMissing = 6; m_cmdFx = [&]() { renderTexturedPolygon<true, false, 3>(); }; break;
+				case 0x26: m_renderValues.push_back(m_gp0); m_requestsMissing = 6; m_cmdFx = [&]() { renderTexturedPolygon<false, true, 3>(); }; break;
+				case 0x27: m_renderValues.push_back(m_gp0); m_requestsMissing = 6; m_cmdFx = [&]() { renderTexturedPolygon<false, false, 3>(); }; break;
+				case 0x2C: m_renderValues.push_back(m_gp0); m_requestsMissing = 8; m_cmdFx = [&]() { renderTexturedPolygon<true, true, 4>(); }; break;
+				case 0x2D: m_renderValues.push_back(m_gp0); m_requestsMissing = 8; m_cmdFx = [&]() { renderTexturedPolygon<true, false, 4>(); }; break;
+				case 0x2E: m_renderValues.push_back(m_gp0); m_requestsMissing = 8; m_cmdFx = [&]() { renderTexturedPolygon<false, true, 4>(); }; break;
+				case 0x2F: m_renderValues.push_back(m_gp0); m_requestsMissing = 8; m_cmdFx = [&]() { renderTexturedPolygon<false, false, 4>(); }; break;
+
+					// Shaded polygon
+				case 0x30: m_renderValues.push_back(m_gp0); m_requestsMissing = 5; m_cmdFx = [&]() { renderShadedPolygon<true, 3>(); }; break;
+				case 0x32: m_renderValues.push_back(m_gp0); m_requestsMissing = 5; m_cmdFx = [&]() { renderShadedPolygon<false, 3>(); }; break;
+				case 0x38: m_renderValues.push_back(m_gp0); m_requestsMissing = 7; m_cmdFx = [&]() { renderShadedPolygon<true, 4>(); }; break;
+				case 0x3A: m_renderValues.push_back(m_gp0); m_requestsMissing = 7; m_cmdFx = [&]() { renderShadedPolygon<false, 4>(); }; break;
+
+
+				case 0xA0: m_renderValues.push_back(m_gp0); m_requestsMissing = 2; m_cmdFx = [&]() { copyRectangle(); }; break;
+
+				case 0xC0: m_renderValues.push_back(m_gp0); m_requestsMissing = 2; m_cmdFx = [&]() { imageStore(); }; break;
+
+				case 0xE1: drawMode(m_gp0.CMD_E1.texturePageXBase, m_gp0.CMD_E1.texturePageYBase, m_gp0.CMD_E1.semiTransparency, m_gp0.CMD_E1.textureDepth, m_gp0.CMD_E1.dithering, m_gp0.CMD_E1.drawToDisplay, m_gp0.CMD_E1.textureDisabled); break;
+				case 0xE2: textureWindowSettings(m_gp0.windowSettings); break;
+				case 0xE3: setDrawingAreaTopLeft(m_gp0.drawingCoordinate); break;
+				case 0xE4: setDrawingAreaBottomRight(m_gp0.drawingCoordinate); break;
+				case 0xE5: setDrawingOffset(m_gp0.drawingOffset); break;
+				case 0xE6: setMaskBitSettings(m_gp0.CMD_E6.useMaskBit, m_gp0.CMD_E6.preserveMaskedPixels);  break;
+				default: throw std::runtime_error("Unhandled GP0 command");
+				}
+			}
+		}
+
+		// gp0 : 0x01
+		void clearCache()
+		{
+			// TODO: Implement me. This function will clear texture cache, once implemented.
+			std::cout << "Unhandled clearCache" << std::endl;
+		}
+
+		// TODO: Change the template params for enums ? Opaque or Semi-Transparent, TextureBlending or RawTexture
+		// gp0 : 0x20, 0x22, 0x28, 0x2A
+		template <bool isOpaque, uint8_t numberOfVertex>
+		void renderMonochromePolygon()
+		{
+			// TODO: Handle it!
+			std::cout << "Unhandled renderMonochromePolygon" << std::endl;
+		}
+
+		// gp0 : 0x30, 0x32, 0x38, 0x3A
+		template <bool isOpaque, uint8_t numberOfVertex>
+		void renderShadedPolygon()
+		{
+			// TODO: Handle it!
+			std::cout << "Unhandled renderShadedPolygon" << std::endl;
+		}
+
+		// gp0 : 0x24, 0x25, 0x26, 0x27, 0x2C, 0x2D, 0x2E, 0x2F
+		template<bool isOpaque, bool isTextureBlending, uint8_t numberOfVertex>
+		void renderTexturedPolygon()
+		{
+			// TODO: Handle it!
+			std::cout << "Unhandled renderTexturedPolygon" << std::endl;
+		}
+
+		//  gp0 : 0xA0
+		void copyRectangle()
+		{
+			RectangleCoordinate rectangleCoordinate = m_renderValues[1].rectangleCoordinate;
+			Rectangle rectangle = m_renderValues[2].rectangle;
+
+			uint32_t imageSize = rectangle.width * rectangle.height;
+			// Round up
+			m_requestsMissing = (imageSize + 1) / 2;
+			m_cmdFx = [&]() {}; // Do nothing for now... TODO Implement me !
+		}
+
+		// gp0 : 0xC0
+		void imageStore()
+		{
+			// TODO Implement me...
+			std::cout << "Unhandled image store" << std::endl;
 		}
 
 		// gp0 : 0xE1
