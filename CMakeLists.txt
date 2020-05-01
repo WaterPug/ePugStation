@@ -5,6 +5,12 @@ project(ePugStation VERSION 0.1.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+if (MSVC)
+	add_compile_options(/W4)
+else()
+	add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+	
 set(_src_root_path "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 ## conan
@@ -31,6 +37,7 @@ file(
 
 add_executable(ePugStation ${_source_list})
 target_link_libraries(ePugStation CONAN_PKG::sdl2)
+target_link_libraries(ePugStation CONAN_PKG::glad)
 
 foreach(_source IN ITEMS ${_source_list})
     get_filename_component(_source_path "${_source}" PATH)
