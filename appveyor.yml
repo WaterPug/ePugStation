@@ -7,6 +7,6 @@ build_script:
     
     cd build
     
-    cmake c:\projects\source -G "Visudal Studio 15 2017 Win64"
+    cmake c:\projects\source -G "Visual Studio 15 2017 Win64"
     
     cmake --build . --config "Debug"
