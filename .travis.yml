@@ -3,6 +3,7 @@ sudo: false
 language: cpp
 
 install:
+  - pip install --upgrade pip
 # Install conan
   - pip install conan
 # Automatic detection of your arch, compiler, etc.
