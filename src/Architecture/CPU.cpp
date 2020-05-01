@@ -7,7 +7,7 @@ namespace ePugStation
 {
 	CPU::CPU() :
 		m_ip(BIOS_ROM_LOGICAL),
-		m_loadPair({ 0, 0 }),
+		m_loadPair(std::make_pair(0, 0)),
 		m_HI(0xdeadbeaf),
 		m_LO(0xdeadbeaf),
 		m_isBranching(false),
@@ -46,7 +46,7 @@ namespace ePugStation
 		// Point IP to next instruction
 		m_nextIp += 4;
 		setReg(m_loadPair);
-		m_loadPair = { 0,0 };
+		m_loadPair = std::make_pair(0, 0);
 		decodeAndExecuteCurrentOp();
 		m_registers = m_outputRegisters;
 	}
@@ -306,7 +306,7 @@ namespace ePugStation
 		}
 
 		// fill load
-		m_loadPair = { cpuIndex, loadValue };
+		m_loadPair = std::make_pair(cpuIndex, loadValue);
 	}
 
 	// Move to Cop0
@@ -816,7 +816,8 @@ namespace ePugStation
 		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
 		if (checkIfAlignedBy<ALIGNED_FOR_32_BITS>(address))
 		{
-			m_loadPair = { m_instruction.t, load32(address) };
+			uint32_t index = m_instruction.t;
+			m_loadPair = std::make_pair(index, load32(address));
 		}
 		else
 		{
@@ -880,7 +881,8 @@ namespace ePugStation
 		case 2: result = (currentT & 0x000000ff) | (alignedWord << 8); break;
 		case 3: result = (currentT & 0x00000000) | alignedWord; break;
 		}
-		m_loadPair = { m_instruction.t, result };
+		uint32_t index = m_instruction.t;
+		m_loadPair = std::make_pair(index, result);
 	}
 
 	// Load Word right
@@ -900,7 +902,8 @@ namespace ePugStation
 		case 2: result = (curV & 0xffff0000) | (alignedWord >> 16); break;
 		case 3: result = (curV & 0xffffff00) | (alignedWord >> 24); break;
 		}
-		m_loadPair = { m_instruction.t, result };
+		uint32_t index = m_instruction.t;
+		m_loadPair = std::make_pair(index, result);
 	}
 
 	void CPU::opLB()
@@ -911,7 +914,9 @@ namespace ePugStation
 		}
 		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
 		int8_t loadValue = load8(address);
-		m_loadPair = { m_instruction.t, static_cast<uint32_t>(loadValue) };
+
+		uint32_t index = m_instruction.t;
+		m_loadPair = std::make_pair(index, static_cast<uint32_t>(loadValue));
 	}
 
 	void CPU::opLBU()
@@ -921,7 +926,9 @@ namespace ePugStation
 			return;
 		}
 		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
-		m_loadPair = { m_instruction.t, load8(address) };
+
+		uint32_t index = m_instruction.t;
+		m_loadPair = std::make_pair(index, load8(address));
 	}
 
 	void CPU::opLH()
@@ -934,7 +941,8 @@ namespace ePugStation
 		if (checkIfAlignedBy<ALIGNED_FOR_16_BITS>(address))
 		{
 			int16_t loadValue = load16(address);
-			m_loadPair = { m_instruction.t, static_cast<uint32_t>(loadValue) };
+			uint32_t index = m_instruction.t;
+			m_loadPair = std::make_pair(index, static_cast<uint32_t>(loadValue));
 		}
 		else
 		{
@@ -951,7 +959,8 @@ namespace ePugStation
 		uint32_t address = m_registers[m_instruction.s] + m_instruction.imm_se;
 		if (checkIfAlignedBy<ALIGNED_FOR_16_BITS>(address))
 		{
-			m_loadPair = { m_instruction.t, load16(address) };
+			uint32_t index = m_instruction.t;
+			m_loadPair = std::make_pair(index, load16(address));
 		}
 		else
 		{

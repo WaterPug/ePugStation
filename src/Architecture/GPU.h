@@ -87,8 +87,8 @@ namespace ePugStation
 	{
 		HSyncDisplay() : value(0) {}
 		HSyncDisplay(uint32_t reg) : value(reg) {}
-		HSyncDisplay(uint16_t hStart, uint16_t hEnd) : value(0), start(hStart), end(hEnd) {}
-		HSyncDisplay(const HSyncDisplay& hSyncDisplay) : value(0), start(hSyncDisplay.start), end(hSyncDisplay.end) {}
+		HSyncDisplay(uint16_t hStart, uint16_t hEnd) : value(0) { start = hStart; end = hEnd; }
+		HSyncDisplay(const HSyncDisplay& hSyncDisplay) : value(0) { start = hSyncDisplay.start; end = hSyncDisplay.end; }
 		union
 		{
 			unsigned value;
@@ -103,8 +103,8 @@ namespace ePugStation
 	{
 		VSyncDisplay() : value(0) {}
 		VSyncDisplay(uint32_t reg) : value(reg) {}
-		VSyncDisplay(uint16_t vStart, uint16_t vEnd) : value(0), start(vStart), end(vEnd) {}
-		VSyncDisplay(const VSyncDisplay& vSyncDisplay) : value(0), start(vSyncDisplay.start), end(vSyncDisplay.end) {}
+		VSyncDisplay(uint16_t vStart, uint16_t vEnd) : value(0) { start = vStart; end = vEnd; }
+		VSyncDisplay(const VSyncDisplay& vSyncDisplay) : value(0) { start = vSyncDisplay.start; end = vSyncDisplay.end; }
 		union
 		{
 			unsigned value;
@@ -119,8 +119,8 @@ namespace ePugStation
 	{
 		DrawingCoordinate() : value(0) {}
 		DrawingCoordinate(uint32_t reg) : value(reg) {}
-		DrawingCoordinate(uint16_t x, uint16_t y) : value(0), xValue(x), yValue(y) {}
-		DrawingCoordinate(const DrawingCoordinate& drawingCoordinate) : value(0), xValue(drawingCoordinate.xValue), yValue(drawingCoordinate.yValue) {}
+		DrawingCoordinate(uint16_t x, uint16_t y) : value(0) { xValue = x; yValue = y; }
+		DrawingCoordinate(const DrawingCoordinate& drawingCoordinate) : value(0) { xValue = drawingCoordinate.xValue; yValue = drawingCoordinate.yValue; }
 		union
 		{
 			unsigned value;
@@ -135,8 +135,8 @@ namespace ePugStation
 	{
 		RectangleCoordinate() : value(0) {}
 		RectangleCoordinate(uint32_t reg) : value(reg) {}
-		RectangleCoordinate(uint16_t x, uint16_t y) : value(0), xValue(x), yValue(y) {}
-		RectangleCoordinate(const RectangleCoordinate& rectangleCoordinate) : value(0), xValue(rectangleCoordinate.xValue), yValue(rectangleCoordinate.yValue) {}
+		RectangleCoordinate(uint16_t x, uint16_t y) : value(0) { xValue = x; yValue = y; }
+		RectangleCoordinate(const RectangleCoordinate& rectangleCoordinate) : value(0) { xValue = rectangleCoordinate.xValue; yValue = rectangleCoordinate.yValue; }
 		union
 		{
 			unsigned value;
@@ -151,8 +151,8 @@ namespace ePugStation
 	{
 		Rectangle() : value(0) {}
 		Rectangle(uint32_t reg) : value(reg) {}
-		Rectangle(uint16_t inWidth, uint16_t inHeight) : value(0), width(inWidth), height(inHeight) {}
-		Rectangle(const Rectangle& rectangle) : value(0), width(rectangle.width), height(rectangle.height) {}
+		Rectangle(uint16_t inWidth, uint16_t inHeight) : value(0) { width = inWidth; height = inHeight; }
+		Rectangle(const Rectangle& rectangle) : value(0) { width = rectangle.width; height = rectangle.height; }
 		union
 		{
 			unsigned value;
@@ -167,8 +167,8 @@ namespace ePugStation
 	{
 		DrawingOffset() : value(0) {}
 		DrawingOffset(uint32_t reg) : value(reg) {}
-		DrawingOffset(uint16_t x, uint16_t y) : value(0), xOffset(x), yOffset(y) {}
-		DrawingOffset(const DrawingOffset& drawingOffset) : value(0), xOffset(drawingOffset.xOffset), yOffset(drawingOffset.yOffset) {}
+		DrawingOffset(uint16_t x, uint16_t y) : value(0) { xOffset = x; yOffset = y; }
+		DrawingOffset(const DrawingOffset& drawingOffset) : value(0) { xOffset = drawingOffset.xOffset; yOffset = drawingOffset.yOffset; }
 		union
 		{
 			unsigned value;
@@ -184,13 +184,14 @@ namespace ePugStation
 		TextureWindowSettings() : value(0) {}
 		TextureWindowSettings(uint32_t reg) : value(reg) {}
 		TextureWindowSettings(uint8_t maskX, uint8_t maskY, uint8_t offsetX, uint8_t offsetY) :
-			value(0), textureWindowMaskX(maskX), textureWindowMaskY(maskY), textureWindowOffsetX(offsetX), textureWindowOffsetY(offsetY) {}
+			value(0) { textureWindowMaskX = maskX; textureWindowMaskY = maskY; textureWindowOffsetX = offsetX; textureWindowOffsetY = offsetY; }
 		TextureWindowSettings(const TextureWindowSettings& drawingOffset) :
-			value(0),
-			textureWindowMaskX(drawingOffset.textureWindowMaskX),
-			textureWindowMaskY(drawingOffset.textureWindowMaskY),
-			textureWindowOffsetX(drawingOffset.textureWindowOffsetX),
-			textureWindowOffsetY(drawingOffset.textureWindowOffsetY) {}
+			value(0) {
+			textureWindowMaskX = drawingOffset.textureWindowMaskX;
+			textureWindowMaskY = drawingOffset.textureWindowMaskY;
+			textureWindowOffsetX = drawingOffset.textureWindowOffsetX;
+			textureWindowOffsetY = drawingOffset.textureWindowOffsetY;
+		}
 		union
 		{
 			uint32_t value;
