@@ -2,7 +2,16 @@ dist: trusty
 sudo: false
 language: cpp
 
+install:
+# Install conan
+  - pip install conan
+# Automatic detection of your arch, compiler, etc.
+  - conan user
+
 script:
-    - cmake .
-    - cmake --build . -- -j2
+# Download dependencies and build project
+  - conan install .
+# Call build system
+  - cmake .
+  - cmake --build . -- -j2
     
