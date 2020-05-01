@@ -2,6 +2,8 @@
 #define E_PUG_STATION_GPU
 
 #include "Utilities/Constants.h"
+#include "Renderer.h"
+
 #include <cstdint>
 #include <vector>
 #include <functional>
@@ -69,8 +71,8 @@ namespace ePugStation
 	{
 		VRAMDisplay() : value(0) {}
 		VRAMDisplay(uint32_t reg) : value(reg) {}
-		VRAMDisplay(uint16_t startX, uint16_t startY) : value(0), xStart(startX), yStart(startY) {}
-		VRAMDisplay(const VRAMDisplay& vramDisplay) : value(0), xStart(vramDisplay.xStart), yStart(vramDisplay.yStart) {}
+		VRAMDisplay(uint16_t startX, uint16_t startY) : value(0) { xStart = startX; yStart = startY; }
+		VRAMDisplay(const VRAMDisplay& vramDisplay) : value(0) { xStart = vramDisplay.xStart; yStart = vramDisplay.yStart; }
 		union
 		{
 			unsigned value;
@@ -352,6 +354,8 @@ namespace ePugStation
 		DrawingCoordinate m_drawingAreaTopLeft;
 		DrawingCoordinate m_drawingAreaBottomRight;
 		DrawingOffset m_drawingOffset;
+
+		//Renderer m_renderer;
 
 		int m_requestsMissing = 0;
 		std::function<void(void)> m_cmdFx;

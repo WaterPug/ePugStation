@@ -1,6 +1,5 @@
 #include "BIOS.h"
 #include <fstream>
-#include <intrin.h>
 
 namespace ePugStation
 {
