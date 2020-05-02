@@ -2,13 +2,10 @@ dist: trusty
 sudo: false
 language: cpp
 
-compiler:
-  - gcc
-  - clang
-
 matrix:
   include:
   - os: linux
+    compiler: gcc
     addons:
       apt:
         sources:
@@ -20,6 +17,7 @@ matrix:
     
   include:
   - os: linux
+    compiler: clang
     addons:
       apt:
         sources:
