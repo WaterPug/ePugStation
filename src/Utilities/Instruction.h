@@ -5,7 +5,7 @@
 
 namespace ePugStation
 {
-    enum class PrimaryOp : uint8_t
+    enum class PrimaryOp : unsigned
     {
         // Special
         SubOp = 0b000000,
@@ -74,7 +74,7 @@ namespace ePugStation
         opSWC3 = 0b111011
     };
 
-    enum class SecondaryOp : uint8_t
+    enum class SecondaryOp : unsigned
     {
         // Shifts
         opSLL = 0b000000,

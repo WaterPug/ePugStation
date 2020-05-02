@@ -80,14 +80,50 @@ namespace ePugStation
 
     void CPU::decodeAndExecuteCurrentOp()
     {
-        auto it = m_primaryOpFunc.find(m_instruction.op.primary);
-        if (it != m_primaryOpFunc.end())
+        switch (m_instruction.op.primary)
         {
-            it->second();
-        }
-        else
-        {
-            throw std::runtime_error("Unhandled primary operation");
+        case PrimaryOp::SubOp: matchSubOp(); break;
+        case PrimaryOp::BranchOp: matchSubBranchOp(); break;
+        case PrimaryOp::opJ: opJ(); break;
+        case PrimaryOp::opJAL: opJAL(); break;
+        case PrimaryOp::opBEQ: opBEQ(); break;
+        case PrimaryOp::opBNE: opBNE(); break;
+        case PrimaryOp::opBLEZ: opBLEZ(); break;
+        case PrimaryOp::opBGTZ: opBGTZ(); break;
+        case PrimaryOp::opADDI: opADDI(); break;
+        case PrimaryOp::opADDIU: opADDIU(); break;
+        case PrimaryOp::opSLTI: opSLTI(); break;
+        case PrimaryOp::opSLTIU: opSLTIU(); break;
+        case PrimaryOp::opANDI: opANDI(); break;
+        case PrimaryOp::opORI: opORI(); break;
+        case PrimaryOp::opXORI: opXORI(); break;
+        case PrimaryOp::opCop0: opCop0(); break;
+        case PrimaryOp::opCop1: opCop1(); break;
+        case PrimaryOp::opCop2: opCop2(); break;
+        case PrimaryOp::opCop3: opCop3(); break;
+        case PrimaryOp::opLUI: opLUI(); break;
+        case PrimaryOp::opLB:opLB(); break;
+        case PrimaryOp::opLBU: opLBU(); break;
+        case PrimaryOp::opLH:opLH(); break;
+        case PrimaryOp::opLWL: opLWL(); break;
+        case PrimaryOp::opLW:opLW(); break;
+        case PrimaryOp::opLHU: opLHU(); break;
+        case PrimaryOp::opLWR: opLWR(); break;
+        case PrimaryOp::opSB:opSB(); break;
+        case PrimaryOp::opSH:opSH(); break;
+        case PrimaryOp::opSWL: opSWL(); break;
+        case PrimaryOp::opSW:opSW(); break;
+        case PrimaryOp::opSWR: opSWR(); break;
+        case PrimaryOp::opLWC0: opLWC0(); break;
+        case PrimaryOp::opLWC1: opLWC1(); break;
+        case PrimaryOp::opLWC2: opLWC2(); break;
+        case PrimaryOp::opLWC3: opLWC3(); break;
+        case PrimaryOp::opSWC0: opSWC0(); break;
+        case PrimaryOp::opSWC1: opSWC1(); break;
+        case PrimaryOp::opSWC2: opSWC2(); break;
+        case PrimaryOp::opSWC3: opSWC3(); break;
+        default:
+            throw std::runtime_error("Primary op instruction function not implemented");
         }
     }
 
@@ -106,14 +142,38 @@ namespace ePugStation
 
     void CPU::matchSubOp()
     {
-        auto it = m_secondaryOpFunc.find(m_instruction.op.seconday);
-        if (it != m_secondaryOpFunc.end())
+        switch (m_instruction.op.seconday)
         {
-            it->second();
-        }
-        else
-        {
-            throw std::runtime_error("Unhandled secondary operation");
+        case SecondaryOp::opSLL:opSLL(); break;
+        case SecondaryOp::opSRL:opSRL(); break;
+        case SecondaryOp::opSRA:opSRA(); break;
+        case SecondaryOp::opSLLV: opSLLV(); break;
+        case SecondaryOp::opSRLV: opSRLV(); break;
+        case SecondaryOp::opSRAV: opSRAV(); break;
+        case SecondaryOp::opJR: opJR(); break;
+        case SecondaryOp::opJALR: opJALR(); break;
+        case SecondaryOp::opSYSCALL: opSYSCALL(); break;
+        case SecondaryOp::opBREAK: opBREAK(); break;
+        case SecondaryOp::opMFHI: opMFHI(); break;
+        case SecondaryOp::opMTHI: opMTHI(); break;
+        case SecondaryOp::opMFLO: opMFLO(); break;
+        case SecondaryOp::opMTLO: opMTLO(); break;
+        case SecondaryOp::opMULT: opMULT(); break;
+        case SecondaryOp::opMULTU: opMULTU(); break;
+        case SecondaryOp::opDIV: opDIV(); break;
+        case SecondaryOp::opDIVU: opDIVU(); break;
+        case SecondaryOp::opADD: opADD(); break;
+        case SecondaryOp::opADDU: opADDU(); break;
+        case SecondaryOp::opSUB: opSUB(); break;
+        case SecondaryOp::opSUBU: opSUBU(); break;
+        case SecondaryOp::opAND: opAND(); break;
+        case SecondaryOp::opOR: opOR(); break;
+        case SecondaryOp::opXOR: opXOR(); break;
+        case SecondaryOp::opNOR: opNOR(); break;
+        case SecondaryOp::opSLT: opSLT(); break;
+        case SecondaryOp::opSLTU: opSLTU();  break;
+        default:
+            throw std::runtime_error("SubOperation not implemented...");
         }
     }
 
@@ -161,7 +221,6 @@ namespace ePugStation
     void CPU::opCop3()
     {
         exception(CPUException::CoprocessorError); // Doesn't exist on Playstation
-
     }
 
     // MFC : Move From Cop0
@@ -439,7 +498,6 @@ namespace ePugStation
     {
         setReg(m_instruction.reg.d, !(m_registers[m_instruction.reg.s] | m_registers[m_instruction.reg.t]));
     }
-
 
     void CPU::opJ()
     {
