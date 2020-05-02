@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 if (MSVC)
     add_compile_options(/W4)
 else()
-    add_compile_options(-Wall -Wextra -Wpedantic)
+    add_compile_options(-fshort-enums -Wall -Wextra -Wpedantic)
 endif()
     
 set(_src_root_path "${CMAKE_CURRENT_SOURCE_DIR}/src")

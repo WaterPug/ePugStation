@@ -80,7 +80,15 @@ namespace ePugStation
 
     void CPU::decodeAndExecuteCurrentOp()
     {
-        m_primaryOpFunc.at(m_instruction.op.primary)();
+        auto it = m_primaryOpFunc.find(m_instruction.op.primary);
+        if (it != m_primaryOpFunc.end())
+        {
+            it->second();
+        }
+        else
+        {
+            throw std::runtime_error("Unhandled primary operation");
+        }
     }
 
     void CPU::matchSubBranchOp()
@@ -98,7 +106,15 @@ namespace ePugStation
 
     void CPU::matchSubOp()
     {
-        m_secondaryOpFunc.at(m_instruction.op.seconday)();
+        auto it = m_secondaryOpFunc.find(m_instruction.op.seconday);
+        if (it != m_secondaryOpFunc.end())
+        {
+            it->second();
+        }
+        else
+        {
+            throw std::runtime_error("Unhandled secondary operation");
+        }
     }
 
     void CPU::setReg(uint32_t index, uint32_t value)
