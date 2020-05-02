@@ -1,12 +1,32 @@
-image:
-  - Visual Studio 2017
+branches:
+  only:
+  - master
 clone_folder: c:\projects\source
-build_script:
-- cmd: >-
+image:
+- Visual Studio 2017
+- Visual Studio 2019
+configuration:
+- Debug
+- Release
+platform:
+- x64
+
+init:
+- set arch=
+- if "%arch%"=="Win64" ( set arch= Win64 )
+- echo %arch%
+- echo %APPVEYOR_BUILD_WORKER_IMAGE%
+- if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( set generator="Visual Studio 15 2017%arch%" )
+- if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( set generator="Visual Studio 16 2019%arch%" )
+- echo %generator%
+  
+before_build:
+- cmd: |-
     mkdir build
-    
     cd build
+    cmake --version
+    cmake c:\projects\source -G %generator%
     
-    cmake c:\projects\source -G "Visual Studio 15 2017 Win64"
-    
-    cmake --build . --config "Debug"
+build:
+  project: c:\projects\source\build\ePugStation.sln
+  parallel: true
