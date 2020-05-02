@@ -1,37 +1,35 @@
-dist: trusty
-sudo: false
 language: cpp
+sudo: false
 
 matrix:
   include:
-  - os: linux
-    compiler: gcc
-    addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-        packages:
-          - g++-8
-    env:
-    - MATRIX_EVAL="CC=gcc-8 && CXX=g++-8"
+    - os: linux
+      dist: xenial
+      env: [USE_CC='/usr/bin/gcc-8', USE_CXX='/usr/bin/g++-8']
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages:['g++-8', 'gcc-8']
     
   include:
-  - os: linux
-    compiler: clang
-    addons:
-      apt:
-        sources:
-          - llvm-toolchain-trusty-6.0
-        packages:
-          - clang-6.0
-    env:
-    - MATRIX_EVAL="CC=clang-6.0 && CXX=clang-6.0"
+    - os: linux
+      dist: xenial
+      env: [USE_CC='/usr/bin/clang-6.0', USE_CXX='/usr/bin/clang++-6.0']
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages:['clang-6.0', 'libstdc++-9-dev', 'libstdc++6']
     
 before_install:
-- eval "${MATRIX_EVAL}"
+  # Override compilers set by Travis
+  - if [ ! -z "${USE_CC}" ]; then echo "Override CC=${USE_CC}"; eval "CC=${USE_CC}"; fi
+  - if [ ! -z "${USE_CXX}" ]; then echo "Override CXX=${USE_CXX}"; eval "CXX=${USE_CXX}"; fi
+  - echo ${CC} && ${CC} --version
+  - echo ${CXX} && ${CXX} --version
     
 script:
-# Call build system
-  - cmake .
-  - cmake --build . -- VERBOSE=1
+#Build & Install library
+  - (mkdir -p lib/build-debug/ && cd lib/build-debug && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=~/.local/ .. && cmake --build . --target install)
+  - (mkdir -p lib/build-release/ && cd lib/build-release && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=~/.local/ .. && cmake --build . --target install)
+
     
