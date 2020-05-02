@@ -649,7 +649,7 @@ namespace ePugStation
         uint32_t address = m_registers[m_instruction.reg.s] + m_instruction.imm_se;
         if (checkIfAlignedBy<ALIGNED_FOR_16_BITS>(address))
         {
-            store16(address, m_registers[m_instruction.reg.t]);
+            store16(address, static_cast<uint16_t>(m_registers[m_instruction.reg.t]));
         }
         else
         {

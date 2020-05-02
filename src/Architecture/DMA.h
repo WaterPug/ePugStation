@@ -119,10 +119,9 @@ namespace ePugStation
             {
                 return blockChannel.SyncMode1.amountOfBlocks * blockChannel.SyncMode1.blockSize;
             }
-            else if (control.bit.syncMode == SyncMode::LinkedList)
+            else
             {
-                throw std::runtime_error("Linked not supported");
-                //return 0xffffff;
+                throw std::runtime_error("Linked List not supported");
             }
         }
     };
