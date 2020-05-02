@@ -7,10 +7,10 @@
 
 namespace ePugStation
 {
-	template<uint32_t BYTE_COUNT>
-	bool checkIfAlignedBy(uint32_t address)
-	{
-		return ((address % BYTE_COUNT) == 0);
-	}
+    template<uint32_t BYTE_COUNT>
+    bool checkIfAlignedBy(uint32_t address)
+    {
+        return ((address % BYTE_COUNT) == 0);
+    }
 }
 #endif

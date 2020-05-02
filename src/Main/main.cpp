@@ -1,13 +1,13 @@
 #include "Architecture/CPU.h"
 
-int main(int argc, char* argv[])
+int main(int /*argc*/, char** /*argv[]*/)
 {
-	ePugStation::CPU cpu;
+    ePugStation::CPU cpu;
 
-	while (true)
-	{
-		cpu.runNextInstruction();
-	}
+    while (true)
+    {
+        cpu.runNextInstruction();
+    }
 
-	return -1;
+    return -1;
 }

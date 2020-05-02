@@ -2,252 +2,248 @@
 #define E_PUG_STATION_CPU
 
 #include "Utilities/Constants.h"
-#include "Interconnect.h"
 #include "Utilities/Instruction.h"
+#include "Cop0.h"
+#include "Interconnect.h"
+
 #include <cstdint>
+#include <unordered_map>
+#include "CPUExceptions.h"
 
 namespace ePugStation
 {
-	// TODO: Put these structs in appropriate place
-	struct Cop0_Cause
-	{
-		Cop0_Cause() = default;
-		Cop0_Cause(uint32_t causeValue) : value(causeValue) {}
+    class CPU
+    {
+    public:
+        CPU();
+        ~CPU() = default;
 
-		union
-		{
-			uint32_t value;
-			struct
-			{
-				unsigned unused1 : 2;
-				unsigned excode : 5;
-				unsigned unused2 : 1;
-				unsigned ip : 8;
-				unsigned unused3 : 12;
-				unsigned CE : 2;
-				unsigned unused4 : 1;
-				unsigned BD : 1;
-			};
-		};
-	};
+        void runNextInstruction();
+    private:
+        Cop0 m_cop0;
+        Instruction m_instruction;
+        Interconnect m_interconnect;
 
-	struct Cop0_SR
-	{
-		Cop0_SR() = default;
-		Cop0_SR(uint32_t causeValue) : value(causeValue) {}
+        uint32_t m_ip;
+        uint32_t m_currentIp;
+        uint32_t m_nextIp;
 
-		union
-		{
-			uint32_t value;
-			struct
-			{
-				unsigned IEc : 1;
-				unsigned KUc : 1;
-				unsigned IEp : 1;
-				unsigned KUp : 1;
-				unsigned IEo : 1;
-				unsigned KUo : 1;
-				unsigned unused1 : 2;
-				unsigned Im : 8;
-				unsigned Isc : 1;
-				unsigned Swc : 1;
-				unsigned Pz : 1;
-				unsigned CM : 1;
-				unsigned PE : 1;
-				unsigned TS : 1;
-				unsigned BEV : 1;
-				unsigned unused2 : 2;
-				unsigned RE : 1;
-				unsigned unused3 : 2;
-				unsigned CU0 : 1;
-				unsigned CU1 : 1;
-				unsigned CU2 : 1;
-				unsigned CU3 : 1;
-			};
-		};
-	};
+        uint32_t m_HI;
+        uint32_t m_LO;
 
-	struct Cop0
-	{
-		Cop0_SR sr;		  // Reg 12 : System status register (R/W)
-		Cop0_Cause cause; // Reg 13 : Cause register
-		uint32_t epc;	  // Reg 14 : EPC
-	};
+        bool m_isBranching; // If branch occured in current instruction
+        bool m_delaySlot;   // If last op was branch, we are in delay slot
 
-	enum Exception
-	{
-		Break = 0x9, // Break operation
-		SysCall = 0x8, // Syscall operation
-		Overflow = 0xc, // Arithmetic overflow
-		LoadAddressError = 0x4,
-		StoreAddressError = 0x5,
-		CoprocessorError = 0xb,
-		IllegalInstruction = 0xa
-	};
+        std::array<uint32_t, CPU_REGISTERS> m_registers;
+        std::array<uint32_t, CPU_REGISTERS> m_outputRegisters;
+        std::pair<uint32_t, uint32_t> m_loadPair;
 
-	class CPU
-	{
-	public:
-		CPU();
-		~CPU() = default;
+        const std::unordered_map<PrimaryOp, std::function<void()>> m_primaryOpFunc{
+            {PrimaryOp::SubOp, [this]() {return matchSubOp(); } },
+            {PrimaryOp::BranchOp, [this]() {return matchSubBranchOp(); } },
+            {PrimaryOp::opJ, [this]() {return opJ(); } },
+            {PrimaryOp::opJAL, [this]() {return opJAL(); } },
+            {PrimaryOp::opBEQ, [this]() {return opBEQ(); } },
+            {PrimaryOp::opBNE, [this]() {return opBNE(); } },
+            {PrimaryOp::opBLEZ, [this]() {return opBLEZ(); } },
+            {PrimaryOp::opBGTZ, [this]() {return opBGTZ(); } },
+            {PrimaryOp::opADDI, [this]() {return opADDI(); } },
+            {PrimaryOp::opADDIU, [this]() {return opADDIU(); } },
+            {PrimaryOp::opSLTI, [this]() {return opSLTI(); } },
+            {PrimaryOp::opSLTIU, [this]() {return opSLTIU(); } },
+            {PrimaryOp::opANDI, [this]() {return opANDI(); } },
+            {PrimaryOp::opORI, [this]() {return opORI(); } },
+            {PrimaryOp::opXORI, [this]() {return opXORI(); } },
+            {PrimaryOp::opCop0, [this]() {return opCop0(); } },
+            {PrimaryOp::opCop1, [this]() {return opCop1(); } },
+            {PrimaryOp::opCop2, [this]() {return opCop2(); } },
+            {PrimaryOp::opCop3, [this]() {return opCop3(); } },
+            {PrimaryOp::opLUI, [this]() {return opLUI(); } },
+            {PrimaryOp::opLB, [this]() {return opLB(); } },
+            {PrimaryOp::opLBU, [this]() {return opLBU(); } },
+            {PrimaryOp::opLH, [this]() {return opLH(); } },
+            {PrimaryOp::opLWL, [this]() {return opLWL(); } },
+            {PrimaryOp::opLW, [this]() {return opLW(); } },
+            {PrimaryOp::opLHU, [this]() {return opLHU(); } },
+            {PrimaryOp::opLWR, [this]() {return opLWR(); } },
+            {PrimaryOp::opSB, [this]() {return opSB(); } },
+            {PrimaryOp::opSH, [this]() {return opSH(); } },
+            {PrimaryOp::opSWL, [this]() {return opSWL(); } },
+            {PrimaryOp::opSW, [this]() {return opSW(); } },
+            {PrimaryOp::opSWR, [this]() {return opSWR(); } },
+            {PrimaryOp::opLWC0, [this]() {return opLWC0(); } },
+            {PrimaryOp::opLWC1, [this]() {return opLWC1(); } },
+            {PrimaryOp::opLWC2, [this]() {return opLWC2(); } },
+            {PrimaryOp::opLWC3, [this]() {return opLWC3(); } },
+            {PrimaryOp::opSWC0, [this]() {return opSWC0(); } },
+            {PrimaryOp::opSWC1, [this]() {return opSWC1(); } },
+            {PrimaryOp::opSWC2, [this]() {return opSWC2(); } },
+            {PrimaryOp::opSWC3, [this]() {return opSWC3(); } }
+        };
 
-		void runNextInstruction();
-	private:
+        const std::unordered_map<SecondaryOp, std::function<void()>> m_secondaryOpFunc{
+            {SecondaryOp::opSLL, [this]() {return opSLL(); } },
+            {SecondaryOp::opSRL, [this]() {return opSRL(); } },
+            {SecondaryOp::opSRA, [this]() {return opSRA(); } },
+            {SecondaryOp::opSLLV, [this]() {return opSLLV(); } },
+            {SecondaryOp::opSRLV, [this]() {return opSRLV(); } },
+            {SecondaryOp::opSRAV, [this]() {return opSRAV(); } },
+            {SecondaryOp::opJR, [this]() {return opJR(); } },
+            {SecondaryOp::opJALR, [this]() {return opJALR(); } },
+            {SecondaryOp::opSYSCALL, [this]() {return opSYSCALL(); } },
+            {SecondaryOp::opBREAK, [this]() {return opBREAK(); } },
+            {SecondaryOp::opMFHI, [this]() {return opMFHI(); } },
+            {SecondaryOp::opMTHI, [this]() {return opMTHI(); } },
+            {SecondaryOp::opMFLO, [this]() {return opMFLO(); } },
+            {SecondaryOp::opMTLO, [this]() {return opMTLO(); } },
+            {SecondaryOp::opMULT, [this]() {return opMULT(); } },
+            {SecondaryOp::opMULTU, [this]() {return opMULTU(); } },
+            {SecondaryOp::opDIV, [this]() {return opDIV(); } },
+            {SecondaryOp::opDIVU, [this]() {return opDIVU(); } },
+            {SecondaryOp::opADD, [this]() {return opADD(); } },
+            {SecondaryOp::opADDU, [this]() {return opADDU(); } },
+            {SecondaryOp::opSUB, [this]() {return opSUB(); } },
+            {SecondaryOp::opSUBU, [this]() {return opSUBU(); } },
+            {SecondaryOp::opAND, [this]() {return opAND(); } },
+            {SecondaryOp::opOR, [this]() {return opOR(); } },
+            {SecondaryOp::opXOR, [this]() {return opXOR(); } },
+            {SecondaryOp::opNOR, [this]() {return opNOR(); } },
+            {SecondaryOp::opSLT, [this]() {return opSLT(); } },
+            {SecondaryOp::opSLTU, [this]() {return opSLTU(); } }
+        };
 
-		// Debugging purposes
-		int debugLineCounter = 0;
+        void decodeAndExecuteCurrentOp();
 
-		Cop0 m_cop0;
+        void matchSubOp();
+        void matchSubBranchOp();
 
-		Instruction m_instruction;
+        void setReg(uint32_t index, uint32_t value);
+        void setReg(std::pair<uint32_t, uint32_t> setRegPair);
 
-		uint32_t m_ip;
-		uint32_t m_currentIp;
-		uint32_t m_nextIp;
+        // Loads
+        uint8_t load8(uint32_t address) const;
+        uint16_t load16(uint32_t address) const;
+        uint32_t load32(uint32_t address) const;
 
-		uint32_t m_HI;
-		uint32_t m_LO;
+        // Stores
+        void store8(uint32_t address, uint8_t value);
+        void store16(uint32_t address, uint16_t value);
+        void store32(uint32_t address, uint32_t value);
 
-		bool m_isBranching; // If branch occured in current instruction
-		bool m_delaySlot;   // If last op was branch, we are in delay slot
+        // Branch 
+        void branch(uint32_t offset);
 
-		std::array<uint32_t, CPU_REGISTERS> m_registers;
-		std::array<uint32_t, CPU_REGISTERS> m_outputRegisters;
-		std::pair<uint32_t, uint32_t> m_loadPair;
-		Interconnect m_interconnect;
+        // ADD
+        void opADD();
+        void opADDI();
+        void opADDIU();
+        void opADDU();
 
-		void decodeAndExecuteCurrentOp();
+        // AND 
+        void opAND();
+        void opANDI();
 
-		void matchSubOp();
-		void matchSubBranchOp();
+        // Branch
+        void opBEQ();
+        void opBGEZ();
+        void opBGEZAL();
+        void opBGTZ();
+        void opBLEZ();
+        void opBLTZ();
+        void opBLTZAL();
+        void opBNE();
 
-		void setReg(uint32_t index, uint32_t value);
-		void setReg(std::pair<uint32_t, uint32_t> setRegPair);
+        // Division
+        void opDIV();
+        void opDIVU();
 
-		// Loads
-		uint8_t load8(uint32_t address) const;
-		uint16_t load16(uint32_t address) const;
-		uint32_t load32(uint32_t address) const;
+        // Jump
+        void opJ();
+        void opJAL();
+        void opJR();
+        void opJALR();
 
-		// Stores
-		void store8(uint32_t address, uint8_t value);
-		void store16(uint32_t address, uint16_t value);
-		void store32(uint32_t address, uint32_t value);
+        // Loads
+        void opLB();
+        void opLBU();
+        void opLH();
+        void opLHU();
+        void opLUI();
+        void opLW();
+        void opLWL();
+        void opLWR();
 
-		// Branch 
-		void branch(uint32_t offset);
+        // Move
+        void opMFHI();
+        void opMFLO();
+        void opMTHI();
+        void opMTLO();
 
-		// ADD
-		void opADD();
-		void opADDI();
-		void opADDIU();
-		void opADDU();
+        // Mult
+        void opMULT();
+        void opMULTU();
 
-		// AND 
-		void opAND();
-		void opANDI();
+        // Or
+        void opOR();
+        void opORI();
 
-		// Branch
-		void opBEQ();
-		void opBGEZ();
-		void opBGEZAL();
-		void opBGTZ();
-		void opBLEZ();
-		void opBLTZ();
-		void opBLTZAL();
-		void opBNE();
+        // Store
+        void opSB();
+        void opSW();
+        void opSH();
+        void opSWL();
+        void opSWR();
 
-		// Division
-		void opDIV();
-		void opDIVU();
+        // Shift
+        void opSLL();
+        void opSLLV();
 
-		// Jump
-		void opJ();
-		void opJAL();
-		void opJR();
-		void opJALR();
+        // Set
+        void opSLT();
+        void opSLTI();
+        void opSLTIU();
+        void opSLTU();
 
-		// Loads
-		void opLB();
-		void opLBU();
-		void opLH();
-		void opLHU();
-		void opLUI();
-		void opLW();
-		void opLWL();
-		void opLWR();
+        // Shift right
+        void opSRA();
+        void opSRAV();
+        void opSRL();
+        void opSRLV();
 
-		// Move
-		void opMFHI();
-		void opMFLO();
-		void opMTHI();
-		void opMTLO();
+        // SUB
+        void opSUB();
+        void opSUBU();
 
-		// Mult
-		void opMULT();
-		void opMULTU();
+        // XOR
+        void opXOR();
+        void opXORI();
+        void opNOR();
 
-		// Or
-		void opOR();
-		void opORI();
+        // SYSCALL
+        void opSYSCALL();
+        void opBREAK();
 
-		// Store
-		void opSB();
-		void opSW();
-		void opSH();
-		void opSWL();
-		void opSWR();
+        // Coprocessor operations
+        void opCop0();
+        void opCop1();
+        void opCop2();
+        void opCop3();
+        void opMFC();
+        void opMTC();
+        void opRFE();
+        void opLWC0();
+        void opLWC1();
+        void opLWC2();
+        void opLWC3();
+        void opSWC0();
+        void opSWC1();
+        void opSWC2();
+        void opSWC3();
 
-		// Shift
-		void opSLL();
-		void opSLLV();
+        // Illegal
+        void opIllegal();
 
-		// Set
-		void opSLT();
-		void opSLTI();
-		void opSLTIU();
-		void opSLTU();
-
-		// Shift right
-		void opSRA();
-		void opSRAV();
-		void opSRL();
-		void opSRLV();
-
-		// SUB
-		void opSUB();
-		void opSUBU();
-
-		// XOR
-		void opXOR();
-		void opXORI();
-		void opNOR();
-
-		// SYSCALL
-		void opSYSCALL();
-		void opBREAK();
-
-		// Coprocessor operations
-		void opCop0();
-		void opCop1();
-		void opCop2();
-		void opCop3();
-		void opMFC();
-		void opMTC();
-		void opRFE();
-		void opLWC0();
-		void opLWC1();
-		void opLWC2();
-		void opLWC3();
-		void opSWC0();
-		void opSWC1();
-		void opSWC2();
-		void opSWC3();
-
-		// Illegal
-		void opIllegal();
-
-		void exception(Exception exception);
-	};
+        void exception(CPUException exception);
+    };
 }
 #endif
