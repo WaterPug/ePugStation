@@ -5,20 +5,30 @@ matrix:
   include:
     - os: linux
       dist: xenial
-      env: [USE_CC='/usr/bin/gcc-8', USE_CXX='/usr/bin/g++-8']
+      env:
+        - USE_CC=/usr/bin/gcc-8
+        - USE_CXX=/usr/bin/g++-8
       addons:
         apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages:['g++-8', 'gcc-8']
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-8
+            - gcc-8
     
-  include:
     - os: linux
       dist: xenial
-      env: [USE_CC='/usr/bin/clang-6.0', USE_CXX='/usr/bin/clang++-6.0']
+      env: 
+        - USE_CC=/usr/bin/clang-6.0
+        - USE_CXX=/usr/bin/clang++-6.0
       addons:
         apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages:['clang-6.0', 'libstdc++-9-dev', 'libstdc++6']
+          sources: 
+            - ubuntu-toolchain-r-test
+          packages:
+            - clang-6.0
+            - libstdc++-9-dev
+            - libstdc++6
     
 before_install:
   # Override compilers set by Travis
@@ -28,8 +38,8 @@ before_install:
   - echo ${CXX} && ${CXX} --version
     
 script:
-#Build & Install library
-  - (mkdir -p lib/build-debug/ && cd lib/build-debug && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=~/.local/ .. && cmake --build . --target install)
-  - (mkdir -p lib/build-release/ && cd lib/build-release && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=~/.local/ .. && cmake --build . --target install)
+  # Build Debug/Release
+  - (mkdir -p build-debug/ && cd build-debug && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=~/.local/ .. && cmake --build . )
+  - (mkdir -p build-release/ && cd build-release && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=~/.local/ .. && cmake --build . )
 
     

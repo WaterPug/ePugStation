@@ -14,7 +14,7 @@ platform:
 init:
 - echo %APPVEYOR_BUILD_WORKER_IMAGE%
 - if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( set generator="Visual Studio 15 2017 Win64" )
-- if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( set generator="Visual Studio 16 2019 Win64" )
+- if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( set generator="Visual Studio 16 2019" )
 - echo %generator%
   
 before_build:
@@ -25,5 +25,5 @@ before_build:
     cmake c:\projects\source -G %generator%
     
 build:
-  project: c:\projects\source\build\ePugStation.sln
+  project: c:\projects\source\build\$(APPVEYOR_PROJECT_NAME).sln
   parallel: true
