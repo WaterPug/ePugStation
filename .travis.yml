@@ -42,17 +42,15 @@ before_install:
   - echo ${CXX} && ${CXX} --version
     
 install:
-    - mkdir -p ${DEPS_DIR}    
-    - |
-      set -e
-      mkdir -p ${DEPS_DIR}/vcpkg
-      pushd ${DEPS_DIR}/vcpkg
-      git init
-      git remote add origin https://github.com/Microsoft/vcpkg.git
-      git fetch origin master
-      git checkout -b master origin/master
-      ./bootstrap-vcpkg.sh
-      ./vcpkg install glad
+    - mkdir -p ${DEPS_DIR}/vcpkg
+    - pushd ${DEPS_DIR}/vcpkg
+    - git init
+    - git remote add origin https://github.com/Microsoft/vcpkg.git
+    - git fetch origin master
+    - git checkout -b master origin/master
+    - ./bootstrap-vcpkg.sh
+    - ./vcpkg install glad
+    - popd
     
 script:
   # Build Debug/Release
