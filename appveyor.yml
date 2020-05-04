@@ -10,6 +10,8 @@ configuration:
 - Release
 platform:
 - x64
+build:
+  parallel: true
 
 init:
 - echo %APPVEYOR_BUILD_WORKER_IMAGE%

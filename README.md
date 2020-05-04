@@ -1,7 +1,11 @@
 # ePugStation
 
-To build, requires CMake (>3.14) and Conan installed.
-https://conan.io/
+To build, requires CMake (>3.14) and vcpkg installed.
+With vcpkg, the following dependencies are required to build :  
+ - catch2
+ - glad
+ - sdl2
+(TODO find way to install missing dependencies automatically)
 
 Build status...
 
