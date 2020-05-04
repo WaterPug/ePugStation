@@ -38,3 +38,7 @@ foreach(_source IN ITEMS ${_source_list})
     string(REPLACE "/" "\\" _source_path_msvc "${_source_path}")
     source_group("${_source_path_msvc}" FILES "${_source}")
 endforeach()
+
+enable_testing()
+add_subdirectory(tests)
+

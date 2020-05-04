@@ -49,12 +49,18 @@ install:
     - git fetch origin master
     - git checkout -b master origin/master
     - ./bootstrap-vcpkg.sh
-    - ./vcpkg install glad
+    - ./vcpkg install glad catch2
     - popd
     
 script:
   # Build Debug/Release
-  - (mkdir -p build-debug/ && cd build-debug && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=${DEPS_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=~/.local/ .. && cmake --build . )
-  - (mkdir -p build-release/ && cd build-release && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${DEPS_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=~/.local/ .. && cmake --build . )
-
+  - (mkdir -p build-debug/ && cd build-debug)
+  - cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=${DEPS_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake .. 
+  - cmake --build . -- -j2
+  - ctest -j2
+  - (cd .. && mkdir -p build-release/ && cd build-release)
+  - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${DEPS_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake ..
+  - cmake --build .
+  - ctest -j2
+  
     

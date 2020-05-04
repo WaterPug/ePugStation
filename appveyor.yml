@@ -22,14 +22,14 @@ build_script:
     cd C:\Tools\vcpkg
     git pull
     .\bootstrap-vcpkg.bat
-    vcpkg install glad:x64-windows
+    vcpkg install glad:x64-windows catch2:x64-windows
     vcpkg integrate install
     cd %APPVEYOR_BUILD_FOLDER%
     mkdir build
     cd build
     cmake --version
     cmake c:\projects\source -G %generator% "-DCMAKE_TOOLCHAIN_FILE=C:\Tools\vcpkg\scripts\buildsystems\vcpkg.cmake"
-    cmake --build .
+    cmake --build . -- -j2
 
- #test_script:
- #- cmd: ctest -j2
+ test_script:
+ - cmd: ctest -j2
