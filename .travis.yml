@@ -1,6 +1,10 @@
 language: cpp
 sudo: false
 
+env:
+  global:
+    - DEPS_DIR=${HOME}/deps
+
 matrix:
   include:
     - os: linux
@@ -37,9 +41,22 @@ before_install:
   - echo ${CC} && ${CC} --version
   - echo ${CXX} && ${CXX} --version
     
+install:
+    - mkdir -p ${DEPS_DIR}    
+    - |
+      set -e
+      mkdir -p ${DEPS_DIR}/vcpkg
+      pushd ${DEPS_DIR}/vcpkg
+      git init
+      git remote add origin https://github.com/Microsoft/vcpkg.git
+      git fetch origin master
+      git checkout -b master origin/master
+      ./bootstrap-vcpkg.sh
+      ./vcpkg install glad
+    
 script:
   # Build Debug/Release
-  - (mkdir -p build-debug/ && cd build-debug && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=~/.local/ .. && cmake --build . )
-  - (mkdir -p build-release/ && cd build-release && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=~/.local/ .. && cmake --build . )
+  - (mkdir -p build-debug/ && cd build-debug && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=${DEPS_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=~/.local/ .. && cmake --build . )
+  - (mkdir -p build-release/ && cd build-release && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${DEPS_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=~/.local/ .. && cmake --build . )
 
     

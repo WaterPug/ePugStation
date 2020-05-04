@@ -1,31 +1,23 @@
 cmake_minimum_required(VERSION 3.2)
 
-project(ePugStation VERSION 0.1.0 LANGUAGES C CXX)
+project(ePugStation CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-if (MSVC)
-    add_compile_options(/W4)
-else()
-    add_compile_options(-fshort-enums -Wall -Wextra -Wpedantic)
-endif()
-    
+# Link this 'library' to use the warnings specified in CompilerWarnings.cmake
+add_library(project_warnings INTERFACE)
+# Compiler warnings
+include(cmake/CompilerWarnings.cmake)
+set_project_warnings(project_warnings)
+
+# Static analyzers options
+include(cmake/StaticAnalyzers.cmake)
+
+#include(cmake/Conan.cmake)
+#run_conan()
+
 set(_src_root_path "${CMAKE_CURRENT_SOURCE_DIR}/src")
-
-## Remove conan for now
-### conan
-#if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
-#   message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
-#   file(DOWNLOAD "https://github.com/conan-io/cmake-conan/raw/v0.15/conan.cmake"
-#                 "${CMAKE_BINARY_DIR}/conan.cmake")
-#endif()
-#
-#include(${CMAKE_BINARY_DIR}/conan.cmake)
-#conan_cmake_run(CONANFILE conanfile.txt
-#                BASIC_SETUP CMAKE_TARGETS
-#                BUILD missing)
-
 include_directories(${_src_root_path})
 
 file(
@@ -36,9 +28,10 @@ file(
     "${_src_root_path}/*.h*"
 )
 
+find_package(glad CONFIG REQUIRED)
+
 add_executable(ePugStation ${_source_list})
-#target_link_libraries(ePugStation CONAN_PKG::sdl2)
-#target_link_libraries(ePugStation CONAN_PKG::glad)
+target_link_libraries(ePugStation PRIVATE glad::glad)
 
 foreach(_source IN ITEMS ${_source_list})
     get_filename_component(_source_path "${_source}" PATH)

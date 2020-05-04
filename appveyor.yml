@@ -17,13 +17,19 @@ init:
 - if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( set generator="Visual Studio 16 2019" )
 - echo %generator%
   
-before_build:
+build_script:
 - cmd: |-
+    cd C:\Tools\vcpkg
+    git pull
+    .\bootstrap-vcpkg.bat
+    vcpkg install glad:x64-windows
+    vcpkg integrate install
+    cd %APPVEYOR_BUILD_FOLDER%
     mkdir build
     cd build
     cmake --version
-    cmake c:\projects\source -G %generator%
-    
-build:
-  project: c:\projects\source\build\$(APPVEYOR_PROJECT_NAME).sln
-  parallel: true
+    cmake c:\projects\source -G %generator% "-DCMAKE_TOOLCHAIN_FILE=C:\Tools\vcpkg\scripts\buildsystems\vcpkg.cmake"
+    cmake --build .
+
+ #test_script:
+ #- cmd: ctest -j2
