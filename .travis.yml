@@ -61,7 +61,7 @@ script:
   - ctest -j2
   - cd .. 
   - mkdir -p build-release
-  - cd build-release)
+  - cd build-release
   - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${DEPS_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_INSTALL_PREFIX=~/.local/ ..
   - cmake --build .
   - ctest -j2
