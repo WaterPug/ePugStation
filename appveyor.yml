@@ -29,7 +29,7 @@ build_script:
     cd build
     cmake --version
     cmake c:\projects\source -G %generator% "-DCMAKE_TOOLCHAIN_FILE=C:\Tools\vcpkg\scripts\buildsystems\vcpkg.cmake"
-    cmake --build . -- -j2
+    cmake --build . --
 
- test_script:
- - cmd: ctest -j2
+test_script:
+ - cmd: ctest
