@@ -49,7 +49,7 @@ install:
     - git fetch origin master
     - git checkout -b master origin/master
     - ./bootstrap-vcpkg.sh
-    - ./vcpkg install glad catch2
+    - ./vcpkg install sdl2 glad catch2
     - popd
     
 script:

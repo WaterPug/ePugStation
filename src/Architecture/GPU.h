@@ -348,7 +348,7 @@ namespace ePugStation
         DrawingCoordinate m_drawingAreaBottomRight;
         DrawingOffset m_drawingOffset;
 
-        //Renderer m_renderer;
+        Renderer m_renderer;
 
         int m_requestsMissing = 0;
         std::function<void(void)> m_cmdFx;

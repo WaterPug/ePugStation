@@ -22,7 +22,7 @@ build_script:
     cd C:\Tools\vcpkg
     git pull
     .\bootstrap-vcpkg.bat
-    vcpkg install glad:x64-windows catch2:x64-windows
+    vcpkg install glad:x64-windows catch2:x64-windows sdl2:x64-windows
     vcpkg integrate install
     cd %APPVEYOR_BUILD_FOLDER%
     mkdir build
