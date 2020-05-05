@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <fstream>
 
 namespace ePugStation
 {
@@ -11,6 +12,14 @@ namespace ePugStation
     bool checkIfAlignedBy(uint32_t address)
     {
         return ((address % BYTE_COUNT) == 0);
+    }
+
+    inline std::string getFileContent(const std::string& path)
+    {
+        std::ifstream file(path);
+        std::string content( (std::istreambuf_iterator<char>(file)),
+                             (std::istreambuf_iterator<char>()    ));
+        return content;
     }
 }
 #endif

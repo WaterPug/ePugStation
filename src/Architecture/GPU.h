@@ -253,6 +253,8 @@ namespace ePugStation
             DrawingOffset drawingOffset;
             Rectangle rectangle;
             RectangleCoordinate rectangleCoordinate;
+            Color color;
+            Position position;
 
             struct {
                 unsigned : 24;
@@ -527,24 +529,46 @@ namespace ePugStation
         template <bool isOpaque, uint8_t numberOfVertex>
         void renderMonochromePolygon()
         {
-            // TODO: Handle it!
-            std::cout << "Unhandled renderMonochromePolygon" << std::endl;
+            Position positions[numberOfVertex];
+            Color colors[numberOfVertex];
+            for (int i = 0; i < numberOfVertex; ++i)
+            {
+                positions[i] = m_renderValues[1 + i].position;
+                colors[i] = m_renderValues[0].color;
+            }
+            m_renderer.pushMonochromePolygon<numberOfVertex>(positions, colors);
         }
 
         // gp0 : 0x30, 0x32, 0x38, 0x3A
         template <bool isOpaque, uint8_t numberOfVertex>
         void renderShadedPolygon()
         {
-            // TODO: Handle it!
-            std::cout << "Unhandled renderShadedPolygon" << std::endl;
+            Position positions[numberOfVertex];
+            Color colors[numberOfVertex];
+            for (int i = 0; i < numberOfVertex; ++i)
+            {
+                positions[i] = m_renderValues[1 + (i * 2)].position;
+                colors[i] = m_renderValues[i * 2].color;
+            }
+            m_renderer.pushShadedPolygon<numberOfVertex>(positions, colors);
         }
 
         // gp0 : 0x24, 0x25, 0x26, 0x27, 0x2C, 0x2D, 0x2E, 0x2F
         template<bool isOpaque, bool isTextureBlending, uint8_t numberOfVertex>
         void renderTexturedPolygon()
         {
-            // TODO: Handle it!
-            std::cout << "Unhandled renderTexturedPolygon" << std::endl;
+            // For now... TODO: Fix for textures
+            Color tempColor = Color(0x80, 0, 0);
+
+            Position positions[numberOfVertex];
+            Color colors[numberOfVertex];
+
+            for (int i = 0; i < numberOfVertex; ++i)
+            {
+                positions[i] = m_renderValues[1 + (i * 2)].position;
+                colors[i] = tempColor;
+            }
+            m_renderer.pushShadedPolygon<numberOfVertex>(positions, colors);
         }
 
         //  gp0 : 0xA0
@@ -600,7 +624,10 @@ namespace ePugStation
         // gp0 : 0xE5 --> Not stored in FIFO ? ** Probably executed immediately ** 
         void setDrawingOffset(DrawingOffset offset)
         {
-            m_drawingOffset = offset;
+            m_renderer.setDrawOffset(offset.bit.xOffset, offset.bit.yOffset);
+
+            // Hack for now
+            m_renderer.display();
         }
 
         // gp0 : 0xE6
