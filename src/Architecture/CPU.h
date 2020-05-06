@@ -5,10 +5,11 @@
 #include "Utilities/Instruction.h"
 #include "Cop0.h"
 #include "Interconnect.h"
+#include "CPUExceptions.h"
 
 #include <cstdint>
-#include <unordered_map>
-#include "CPUExceptions.h"
+#include <array>
+#include <memory>
 
 namespace ePugStation
 {
@@ -22,7 +23,7 @@ namespace ePugStation
     private:
         Cop0 m_cop0;
         Instruction m_instruction;
-        Interconnect m_interconnect;
+        std::unique_ptr<Interconnect> m_interconnect;
 
         uint32_t m_ip;
         uint32_t m_currentIp;

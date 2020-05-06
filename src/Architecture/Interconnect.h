@@ -1,10 +1,10 @@
 #ifndef E_PUG_STATION_INTERCONNECT
 #define E_PUG_STATION_INTERCONNECT
 
-#include "BIOS.h"
-#include "Ram.h"
 #include "DMA.h"
 #include "GPU.h"
+
+#include <array>
 
 namespace ePugStation
 {
@@ -13,8 +13,8 @@ namespace ePugStation
     public:
         Interconnect() 
         { 
-            m_bios = std::make_unique<BIOS>();  
-            m_ram = std::make_unique<Ram>();
+            loadBios();
+            m_ram.fill(0xac);
         };
         ~Interconnect() = default;
 
@@ -33,8 +33,10 @@ namespace ePugStation
         void blockCopyDMA(uint32_t index);
         void linkedListCopyDMA(uint32_t index);
 
-        std::unique_ptr<BIOS> m_bios;
-        std::unique_ptr<Ram> m_ram;
+        void loadBios();
+
+        std::array<uint8_t, BIOS_MEMORY_SIZE> m_bios;
+        std::array<uint8_t, RAM_SIZE> m_ram;
         DMA m_dma;
         GPU m_gpu;
     };

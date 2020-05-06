@@ -17,6 +17,8 @@ namespace ePugStation
         m_delaySlot(false),
         m_loadPair(std::make_pair(0, 0))
     {
+        m_interconnect = std::make_unique<Interconnect>();
+
         m_nextIp = m_ip + 4;
 
         m_registers.fill(0xdeadbeef);
@@ -50,32 +52,32 @@ namespace ePugStation
 
     uint8_t CPU::load8(uint32_t address) const
     {
-        return m_interconnect.load8(address);
+        return m_interconnect->load8(address);
     }
 
     void CPU::store8(uint32_t address, uint8_t value)
     {
-        m_interconnect.store8(address, value);
+        m_interconnect->store8(address, value);
     }
 
     uint16_t CPU::load16(uint32_t address) const
     {
-        return m_interconnect.load16(address);
+        return m_interconnect->load16(address);
     }
 
     void CPU::store16(uint32_t address, uint16_t value)
     {
-        m_interconnect.store16(address, value);
+        m_interconnect->store16(address, value);
     }
 
     uint32_t CPU::load32(uint32_t address) const
     {
-        return m_interconnect.load32(address);
+        return m_interconnect->load32(address);
     }
 
     void CPU::store32(uint32_t address, uint32_t value)
     {
-        m_interconnect.store32(address, value);
+        m_interconnect->store32(address, value);
     }
 
     void CPU::decodeAndExecuteCurrentOp()

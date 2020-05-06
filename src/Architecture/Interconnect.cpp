@@ -21,18 +21,49 @@ namespace
     {
         return address & REGION_MASK[address >> 29];
     }
+
+    template<typename DATA_TYPE>
+    constexpr int getDataShiftCount()
+    {
+        if constexpr (sizeof(DATA_TYPE) == 1)
+        {
+            return 0;
+        }
+        if constexpr (sizeof(DATA_TYPE) == 2)
+        {
+            return 1;
+        }
+        else if constexpr (sizeof(DATA_TYPE) == 4)
+        {
+            return 2;
+        }
+    }
+
+    template<typename DATA_TYPE>
+    void store(const uint8_t* data, uint32_t offset, DATA_TYPE value)
+    {
+        constexpr int shiftCount = getDataShiftCount<DATA_TYPE>();
+        ((DATA_TYPE*)data)[offset >> shiftCount] = value;
+    }
+
+    template<typename DATA_TYPE>
+        DATA_TYPE load(const uint8_t* data, uint32_t offset)
+    {
+        constexpr int shiftCount = getDataShiftCount<DATA_TYPE>();
+        return static_cast<DATA_TYPE>(((DATA_TYPE*)data)[offset >> shiftCount]);
+    }
 }
 
 namespace ePugStation
 {
-
     uint8_t Interconnect::load8(uint32_t address) const
     {
         uint32_t physicalAddress = maskRegion(address);
 
         if (BIOS_RANGE_PHYSICAL.contains(physicalAddress))
         {
-            return m_bios->load8(BIOS_RANGE_PHYSICAL.offset(physicalAddress));
+            uint32_t offset = BIOS_RANGE_PHYSICAL.offset(physicalAddress);
+            return load<uint8_t>(m_bios.data(), offset);
         }
         else if (EXPANSION_1_RANGE.contains(physicalAddress))
         {
@@ -46,7 +77,8 @@ namespace ePugStation
         }
         else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
         {
-            return m_ram->load8(RAM_RANGE_PHYSICAL.offset(physicalAddress));
+            uint32_t offset = RAM_RANGE_PHYSICAL.offset(physicalAddress);
+            return load<uint8_t>(m_ram.data(), offset);
         }
         else if (CDROM_RANGE.contains(physicalAddress))
         {
@@ -70,7 +102,8 @@ namespace ePugStation
         }
         else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
         {
-            return m_ram->load16(RAM_RANGE_PHYSICAL.offset(physicalAddress));
+            uint32_t offset = RAM_RANGE_PHYSICAL.offset(physicalAddress);
+            return load<uint16_t>(m_ram.data(), offset);
         }
         else if (INTERRUPT_CONTROL_RANGE.contains(physicalAddress))
         {
@@ -89,11 +122,13 @@ namespace ePugStation
 
         if (BIOS_RANGE_PHYSICAL.contains(physicalAddress))
         {
-            return m_bios->load32(BIOS_RANGE_PHYSICAL.offset(physicalAddress));
+            uint32_t offset = BIOS_RANGE_PHYSICAL.offset(physicalAddress);
+            return load<uint32_t>(m_bios.data(), offset);
         }
         else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
         {
-            return m_ram->load32(RAM_RANGE_PHYSICAL.offset(physicalAddress));
+            uint32_t offset = RAM_RANGE_PHYSICAL.offset(physicalAddress);
+            return load<uint32_t>(m_ram.data(), offset);
         }
         else if (INTERRUPT_CONTROL_RANGE.contains(physicalAddress))
         {
@@ -136,7 +171,8 @@ namespace ePugStation
         }
         else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
         {
-            m_ram->store8(RAM_RANGE_PHYSICAL.offset(physicalAddress), value);
+            uint32_t offset = RAM_RANGE_PHYSICAL.offset(physicalAddress);
+            store<uint8_t>(m_ram.data(), offset, value);
         }
         else if (CDROM_RANGE.contains(physicalAddress))
         {
@@ -162,7 +198,8 @@ namespace ePugStation
         }
         else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
         {
-            return m_ram->store16(RAM_RANGE_PHYSICAL.offset(physicalAddress), value);
+            uint32_t offset = RAM_RANGE_PHYSICAL.offset(physicalAddress);
+            store<uint16_t>(m_ram.data(), offset, value);
         }
         else if (INTERRUPT_CONTROL_RANGE.contains(physicalAddress))
         {
@@ -180,11 +217,13 @@ namespace ePugStation
 
         if (BIOS_RANGE_PHYSICAL.contains(physicalAddress))
         {
-            m_bios->store32(BIOS_RANGE_PHYSICAL.offset(physicalAddress), value);
+            uint32_t offset = BIOS_RANGE_PHYSICAL.offset(physicalAddress);
+            store<uint32_t>(m_bios.data(), offset, value);
         }
         else if (RAM_RANGE_PHYSICAL.contains(physicalAddress))
         {
-            m_ram->store32(RAM_RANGE_PHYSICAL.offset(physicalAddress), value);
+            uint32_t offset = RAM_RANGE_PHYSICAL.offset(physicalAddress);
+            store<uint32_t>(m_ram.data(), offset, value);
         }
         else if (MEM_CONTROL_RANGE.contains(physicalAddress))
         {
@@ -306,12 +345,12 @@ namespace ePugStation
 
         while(true)
         {
-            uint32_t header = m_ram->load32(address);
+            uint32_t header = load<uint32_t>(m_ram.data(), address);
             uint32_t transferSize = header >> 24;
             while (transferSize > 0)
             {
                 address = (address + 4) & 0x1ffffc;
-                uint32_t command = m_ram->load32(address);
+                uint32_t command =  load<uint32_t>(m_ram.data(), address);
                 m_gpu.setGP0Command(command);
                 --transferSize;
             }
@@ -348,11 +387,11 @@ namespace ePugStation
                 {
                     throw std::runtime_error("Unhandled DMA channel port");
                 }
-                m_ram->store32(currentAddress, srcWord);
+                store<uint32_t>(m_ram.data(), currentAddress, srcWord);
             }
             else
             {
-                srcWord = m_ram->load32(currentAddress);
+                srcWord = load<uint32_t>(m_ram.data(), currentAddress);
                 if (index == 2)
                 {
                     m_gpu.setGP0Command(srcWord);
@@ -410,5 +449,25 @@ namespace ePugStation
             }
         }
         throw std::runtime_error("Unhandled DMA access");
+    }
+
+    void Interconnect::loadBios()
+    {
+        std::ifstream biosFile(PATH_TO_BIOS, std::ios::binary | std::ios::ate);
+        if (!biosFile.is_open())
+        {
+            throw std::runtime_error("Failed to open BIOS file");
+        }
+
+        auto length = biosFile.tellg();
+        biosFile.seekg(0, std::ios::beg);
+
+        if (!biosFile.read((char*)m_bios.data(), length))
+        {
+            if (!biosFile.eof())
+            {
+                throw std::runtime_error("BIOS file size mismatch... Not at eof");
+            }
+        }
     }
 }
