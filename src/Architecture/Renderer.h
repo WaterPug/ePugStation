@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <iostream>
+#include <stdexcept>
 
 #include "Utilities/Constants.h"
 #include "Utilities/Utils.h"

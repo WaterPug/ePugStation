@@ -3,6 +3,7 @@
 #include "Utilities/Utils.h"
 
 #include <iostream>
+#include <stdexcept>
 
 namespace
 {

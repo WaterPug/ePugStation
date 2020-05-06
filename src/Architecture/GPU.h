@@ -8,6 +8,7 @@
 #include <vector>
 #include <functional>
 #include <iostream>
+#include <stdexcept>
 
 namespace ePugStation
 {

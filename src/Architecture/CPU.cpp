@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 #include <functional>
+#include <stdexcept>
 
 namespace ePugStation
 {

@@ -2,7 +2,6 @@
 #define E_PUG_STATION_UTILS
 
 #include <cstdint>
-#include <stdexcept>
 #include <string>
 #include <fstream>
 
