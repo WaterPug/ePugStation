@@ -24,3 +24,6 @@ add_subdirectory(shaders)
 enable_testing()
 add_subdirectory(tests)
 
+# Copy data folder
+execute_process(COMMAND ${CMAKE_COMMAND} -E 
+	copy_directory ${CMAKE_SOURCE_DIR}/data ${CMAKE_BINARY_DIR}/data)

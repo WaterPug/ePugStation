@@ -10,7 +10,7 @@ namespace ePugStation
     // BIOS related
     constexpr uint32_t BIOS_ROM_LOGICAL = 0xbfc00000;
     constexpr uint32_t BIOS_ROM_PHYSICAL = 0x1fc00000;
-    constexpr char PATH_TO_BIOS[] = "D:\\GitRepo\\ePugStation\\data\\SCPH1001.BIN";
+    constexpr const char* PATH_TO_BIOS = "..\\data\\SCPH1001.BIN";
     constexpr size_t BIOS_MEMORY_SIZE = 514 * 1024;
     constexpr Range<BIOS_ROM_PHYSICAL, BIOS_MEMORY_SIZE> BIOS_RANGE_PHYSICAL;
 
@@ -84,7 +84,7 @@ namespace ePugStation
     constexpr uint32_t ALIGNED_FOR_16_BITS = 2;
 
     // Shader paths
-    constexpr char PATH_TO_VERTEX_SHADER[] = "..\\shaders\\vertex.glsl";
-    constexpr char PATH_TO_FRAGMENT_SHADER[] = "..\\shaders\\fragment.glsl";
+    constexpr const char* PATH_TO_VERTEX_SHADER = "..\\shaders\\vertex.glsl";
+    constexpr const char* PATH_TO_FRAGMENT_SHADER = "..\\shaders\\fragment.glsl";
 }
 #endif
