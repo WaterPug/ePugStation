@@ -19,6 +19,8 @@ include(cmake/StaticAnalyzers.cmake)
 
 add_subdirectory(src)
 
+add_subdirectory(shaders)
+
 enable_testing()
 add_subdirectory(tests)
 

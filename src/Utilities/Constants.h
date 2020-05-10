@@ -84,7 +84,7 @@ namespace ePugStation
     constexpr uint32_t ALIGNED_FOR_16_BITS = 2;
 
     // Shader paths
-    constexpr char PATH_TO_VERTEX_SHADER[] = "D:\\GitRepo\\ePugStation\\shaders\\vertex.glsl";
-    constexpr char PATH_TO_FRAGMENT_SHADER[] = "D:\\GitRepo\\ePugStation\\shaders\\fragment.glsl";
+    constexpr char PATH_TO_VERTEX_SHADER[] = "..\\shaders\\vertex.glsl";
+    constexpr char PATH_TO_FRAGMENT_SHADER[] = "..\\shaders\\fragment.glsl";
 }
 #endif
