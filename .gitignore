@@ -39,9 +39,3 @@ x64/
 # Visual Studio 2015/2017 cache/options directory
 .vs/
 build/
-# WSL ignores
-CMakeFiles/
-CMakeCache.txt
-Makefile
-cmake_install.cmake
-ePugStation

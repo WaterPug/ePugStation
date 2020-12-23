@@ -6,8 +6,8 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "Utilities/Constants.h"
-#include "Utilities/Utils.h"
+#include "Constants.h"
+#include "Utils.h"
 
 #include "glad/glad.h"
 #include "SDL2/SDL.h"

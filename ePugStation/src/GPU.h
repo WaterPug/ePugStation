@@ -1,7 +1,7 @@
 #ifndef E_PUG_STATION_GPU
 #define E_PUG_STATION_GPU
 
-#include "Utilities/Constants.h"
+#include "Constants.h"
 #include "Renderer.h"
 
 #include <cstdint>

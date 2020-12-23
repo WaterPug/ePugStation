@@ -1,8 +1,8 @@
 #ifndef E_PUG_STATION_CPU
 #define E_PUG_STATION_CPU
 
-#include "Utilities/Constants.h"
-#include "Utilities/Instruction.h"
+#include "Constants.h"
+#include "Instruction.h"
 #include "Cop0.h"
 #include "Interconnect.h"
 #include "CPUExceptions.h"

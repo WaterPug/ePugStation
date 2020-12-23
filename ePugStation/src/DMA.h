@@ -1,7 +1,7 @@
 #ifndef E_PUG_STATION_DMA
 #define E_PUG_STATION_DMA
 
-#include "Utilities/Constants.h"
+#include "Constants.h"
 #include <stdexcept>
 
 namespace ePugStation

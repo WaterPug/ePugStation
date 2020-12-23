@@ -1,6 +1,6 @@
 #include "CPU.h"
-#include <Utilities/OpUtilities.h>
-#include <Utilities/Utils.h>
+#include "OpUtilities.h"
+#include "Utils.h"
 
 #include <iostream>
 #include <map>

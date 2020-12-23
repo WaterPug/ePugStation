@@ -17,7 +17,8 @@ include(cmake/StaticAnalyzers.cmake)
 #include(cmake/Conan.cmake)
 #run_conan()
 
-add_subdirectory(src)
+add_subdirectory(ePugUtilities)
+add_subdirectory(ePugStation)
 
 add_subdirectory(shaders)
 

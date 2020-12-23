@@ -1,6 +1,6 @@
 #include "Interconnect.h"
-#include "Utilities/Constants.h"
-#include "Utilities/Utils.h"
+#include "Constants.h"
+#include "Utils.h"
 
 #include <iostream>
 #include <stdexcept>
