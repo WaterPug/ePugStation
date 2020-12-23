@@ -15,7 +15,7 @@ namespace ePugStation
         {
             uint32_t buffer_mode = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT;
 
-            /* 16bit VRAM pixel buffer. */
+            // 16bit VRAM pixel buffer.
             glGenBuffers(1, &m_pbo);
             glBindBuffer(GL_PIXEL_UNPACK_BUFFER, m_pbo);
 
@@ -25,16 +25,16 @@ namespace ePugStation
             glGenTextures(1, &m_texture);
             glBindTexture(GL_TEXTURE_2D, m_texture);
 
-            /* Set the texture wrapping parameters. */
+            // Set the texture wrapping parameters.
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-            /* Set texture filtering parameters. */
+            // Set texture filtering parameters.
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-            /* Allocate space on the GPU. */
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, 1024 * 4, 512, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
+            // Allocate space on the GPU.
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1024, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
             glBindTexture(GL_TEXTURE_2D, m_texture);
             glBindBuffer(GL_PIXEL_UNPACK_BUFFER, m_pbo);
@@ -58,7 +58,7 @@ namespace ePugStation
         {
             glBindTexture(GL_TEXTURE_2D, m_texture);
             glBindBuffer(GL_PIXEL_UNPACK_BUFFER, m_pbo);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1024 * 4, 512, GL_RED, GL_UNSIGNED_BYTE, 0);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1024 * 4, 512, GL_RED, GL_UNSIGNED_BYTE, m_data);
         }
 
     private:

@@ -22,7 +22,7 @@ namespace ePugStation
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 
-            m_window = SDL_CreateWindow("ePugStation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1024, 512, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+            m_window = SDL_CreateWindow("ePugStation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1024, 512, SDL_WINDOW_OPENGL);
             m_glContext = SDL_GL_CreateContext(m_window);
 
             gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
