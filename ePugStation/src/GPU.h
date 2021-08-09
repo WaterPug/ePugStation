@@ -5,6 +5,7 @@
 #include "SDLContext.h"
 #include "Renderer.h"
 #include "VRAM.h"
+#include "Types.h"
 
 #include <cstdint>
 #include <vector>
@@ -205,35 +206,6 @@ namespace ePugStation
             unsigned textureWindowOffsetX : 5;
             unsigned textureWindowOffsetY : 5;
          }bit;
-      };
-   };
-
-   struct TexCoord
-   {
-      TexCoord() : value(0) {}
-      TexCoord(uint32_t reg) : value(reg) {}
-      union {
-         uint32_t value;
-         struct {
-            unsigned xPos : 8;
-            unsigned yPos : 8;
-
-         }coord;
-         struct {
-            unsigned empty : 16;
-            unsigned x : 5;
-            unsigned y : 9;
-
-         }palette;
-         struct {
-            unsigned empty : 16;
-            unsigned xBase : 4; // *64
-            unsigned yBase : 1; // 0 or 256
-            unsigned semiTrans : 2;
-            unsigned texPageColors : 2; // 4, 8, 15 bit
-
-         }texPage;
-
       };
    };
 
@@ -599,21 +571,39 @@ namespace ePugStation
       template<bool isOpaque, bool isTextureBlending, uint8_t numberOfVertex>
       void renderTexturedPolygon()
       {
-         auto page = m_renderValues[4].texCoord.texPage;
          auto clut = m_renderValues[2].texCoord.palette;
+         auto texPage = m_renderValues[4].texCoord.texPage;
+         if (texPage.texPageColors == 0) // 4 bit
+         {
+            GLint clutData[16];
+            int xPos = clut.x * 16;
+            for (int i = 0; i < 16; ++i)
+            {
+               clutData[i] = m_vram.read(xPos + i, clut.y);
+            }
+            m_renderer.setClut4(clutData);
+         }
+         else
+         {
+            std::cout << "Not supporting other modes than 4 bit atm!\n";
+         }
 
-         // For now... TODO: Fix for textures
-         Color tempColor = Color(0x80, 0, 0);
+         int pageXPos = texPage.xBase * 64;
+         int pageYPos = texPage.yBase * 256;
 
          Position positions[numberOfVertex];
-         Color colors[numberOfVertex];
+         CustomTexCoord textures[numberOfVertex];
 
          for (int i = 0; i < numberOfVertex; ++i)
          {
             positions[i] = m_renderValues[1 + (i * 2)].position;
-            colors[i] = tempColor;
+            int xCoord = pageXPos + (4 * m_renderValues[2 + (i * 2)].texCoord.coord.xPos);
+            int yCoord = pageYPos + m_renderValues[2 + (i * 2)].texCoord.coord.yPos;
+            textures[i] = CustomTexCoord(xCoord, yCoord);
          }
-         m_renderer.pushShadedPolygon<numberOfVertex>(positions, colors);
+
+         m_renderer.setColorDepth(4);
+         m_renderer.pushTexturedPolygon<numberOfVertex>(positions, textures);
       }
 
       //  gp0 : 0xA0
@@ -632,31 +622,24 @@ namespace ePugStation
             int startY = recCoord.bit.yValue;
             int endY = startY + rect.bit.height;
 
-            int dataIndex = 0;
-            for (int y = startY; y < endY; ++y)
+            // TODO: for debugging purposes, remove me
+            static int counter = 0;
+            ++counter;
+            if (counter < 13)
             {
-               for (int x = startX; x < endX; x += 2)
+               int dataIndex = 0;
+               std::cout << "y : " << startY << "-" << endY << " x: " << startX << "-" << endX << '\n';
+               for (int y = startY; y < endY; ++y)
                {
-                  m_vram.write(x, y, m_renderValues[dataIndex].value & 0xff);
-                  m_vram.write(x + 1, y, m_renderValues[dataIndex].value >> 16);
-                  ++dataIndex;
+                  for (int x = startX; x < endX; x += 2)
+                  {
+                     m_vram.write(x, y, m_renderValues[dataIndex].value & 0xffff);
+                     m_vram.write(x + 1, y, m_renderValues[dataIndex].value >> 16);
+                     ++dataIndex;
+                  }
                }
+               m_vram.uploadToGPU();
             }
-            m_vram.uploadToGPU();
-            // Print on side of screen here --> coord  screen width
-            // Need to figure out page and render 2 triangles? TL, TR, BL, BR
-            int xOffset = 640;
-            Position positions[4] =
-            {
-               Position(startX + xOffset, startY),
-               Position(endX + xOffset, startY),
-               Position(startX + xOffset, endY),
-               Position(endX + xOffset, endY)
-            };
-            Color red = Color(0x80, 0, 0);
-            Color colors[4]{ red, red, red, red };
-
-            m_renderer.pushMonochromePolygon<4>(positions, colors);
          };
       }
 

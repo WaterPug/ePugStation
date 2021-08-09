@@ -7,6 +7,7 @@
 
 #include "Constants.h"
 #include "Utils.h"
+#include "Types.h"
 
 #include "glad/glad.h"
 #include "SDL2/SDL.h"
@@ -149,6 +150,16 @@ namespace ePugStation
       GLubyte b;
    };
 
+   struct CustomTexCoord
+   {
+      CustomTexCoord() : x(0), y(0) {};
+      CustomTexCoord(TexCoord texCoord) : x(texCoord.coord.xPos), y(texCoord.coord.yPos) {};
+      CustomTexCoord(GLubyte xPos, GLubyte yPos) : x(xPos), y(yPos) {};
+
+      GLubyte x;
+      GLubyte y;
+   };
+
    class Renderer
    {
    public:
@@ -172,17 +183,29 @@ namespace ePugStation
          // TODO: bad... until I properly understand all this
          m_positions = new Buffer<Position>();
          GLint index = findProgramAttribute("vertexPosition");
-         glEnableVertexAttribArray(index);
          glVertexAttribIPointer(index, 2, GL_SHORT, 0, nullptr);
+         glEnableVertexAttribArray(index);
 
          m_colors = new Buffer<CustomColor>();
          index = findProgramAttribute("vertexColor");
-         glEnableVertexAttribArray(index);
          glVertexAttribIPointer(index, 3, GL_UNSIGNED_BYTE, 0, nullptr);
+         glEnableVertexAttribArray(index);
 
-         // Retrieve
+         m_texCoord = new Buffer<CustomTexCoord>();
+         index = findProgramAttribute("aTexCoord");
+         glVertexAttribIPointer(index, 2, GL_UNSIGNED_BYTE, 0, nullptr);
+         glEnableVertexAttribArray(index);
+
+         // Uniforms
          m_uniformOffset = findProgramUniform("offset");
          glUniform2i(m_uniformOffset, 0, 0);
+
+         m_clut4Location = findProgramUniform("clut4");
+         GLint clut4[16] = { 0 };
+         glUniform1iv(m_clut4Location, 16, clut4);
+
+         m_colorDepthLocation = findProgramUniform("colorDepth");
+         glUniform1i(m_colorDepthLocation, 16);
       }
 
       ~Renderer()
@@ -194,6 +217,7 @@ namespace ePugStation
 
          delete m_positions;
          delete m_colors;
+         delete m_texCoord;
       }
 
       template<uint8_t numberOfVertices>
@@ -206,7 +230,7 @@ namespace ePugStation
       template<uint8_t numberOfVertices>
       void pushShadedPolygon(Position* positions, Color* colors)
       {
-         constexpr uint8_t totalNumberOfVertices = numberOfVertices == 3 ? 3 : 6;
+         constexpr uint8_t totalNumberOfVertices = (numberOfVertices == 3) ? 3 : 6;
          if ((m_numberOfVertices + totalNumberOfVertices) > VERTEX_BUFFER_LENGTH)
          {
             std::cout << "Vertex attribute buffers full, forcing draw\n";
@@ -216,6 +240,7 @@ namespace ePugStation
          {
             m_positions->set(m_numberOfVertices, positions[i]);
             m_colors->set(m_numberOfVertices, CustomColor(colors[i]));
+            m_texCoord->set(m_numberOfVertices, CustomTexCoord(69, 69));
             ++m_numberOfVertices;
          }
          if constexpr (numberOfVertices == 4)
@@ -224,6 +249,35 @@ namespace ePugStation
             {
                m_positions->set(m_numberOfVertices, positions[i]);
                m_colors->set(m_numberOfVertices, CustomColor(colors[i]));
+               m_texCoord->set(m_numberOfVertices, CustomTexCoord(69, 69));
+               ++m_numberOfVertices;
+            }
+         }
+      }
+
+      template<uint8_t numberOfVertices>
+      void pushTexturedPolygon(Position* positions, CustomTexCoord* texCoord)
+      {
+         constexpr uint8_t totalNumberOfVertices = (numberOfVertices == 3) ? 3 : 6;
+         if ((m_numberOfVertices + totalNumberOfVertices) > VERTEX_BUFFER_LENGTH)
+         {
+            std::cout << "Vertex attribute buffers full, forcing draw\n";
+            draw();
+         }
+         for (int i = 0; i < 3; ++i)
+         {
+            m_positions->set(m_numberOfVertices, positions[i]);
+            m_colors->set(m_numberOfVertices, CustomColor());
+            m_texCoord->set(m_numberOfVertices, texCoord[i]);
+            ++m_numberOfVertices;
+         }
+         if constexpr (numberOfVertices == 4)
+         {
+            for (int i = 1; i < 4; ++i)
+            {
+               m_positions->set(m_numberOfVertices, positions[i]);
+               m_colors->set(m_numberOfVertices, CustomColor());
+               m_texCoord->set(m_numberOfVertices, texCoord[i]);
                ++m_numberOfVertices;
             }
          }
@@ -241,6 +295,16 @@ namespace ePugStation
          glUniform2i(m_uniformOffset, static_cast<GLint>(x), static_cast<GLint>(y));
       }
 
+      void setClut4(GLint data[16])
+      {
+         glUniform1iv(m_clut4Location, 16, data);
+      }
+
+      void setColorDepth(GLint colorDepth)
+      {  
+         glUniform1i(m_colorDepthLocation, colorDepth);
+      }
+
    private:
       SDL_Window* m_window;
 
@@ -249,8 +313,11 @@ namespace ePugStation
       GLuint m_openglProgram;
       GLuint m_vao;
       GLuint m_uniformOffset;
+      GLint m_clut4Location;
+      GLint m_colorDepthLocation;
       Buffer<Position>* m_positions;
       Buffer<CustomColor>* m_colors;
+      Buffer<CustomTexCoord>* m_texCoord;
       uint32_t m_numberOfVertices;
 
       GLuint compileShader(const std::string& content, GLenum shaderType)
@@ -313,7 +380,7 @@ namespace ePugStation
          return index;
       }
 
-      // Inefficient, CPU is stalling... Could use double or triple buffering (for later)
+      // TODO: Inefficient, CPU is stalling... Could use double or triple buffering (for later)
       void draw()
       {
          // Make sure persistent mapping data is flushed to the buffer

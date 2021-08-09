@@ -1,19 +1,19 @@
 #version 330 core
- 
+
 in vec3 color; 
-in vec2 tex_coords;
+in vec2 TexCoord;
 out vec4 frag_color;
- 
-uniform int texture_depth;
 
-uniform sampler2D vramTexture;
-
+uniform sampler2D vramTexture4;
+uniform sampler2D vramTexture16;
 uniform int clut4[16];
+uniform int colorDepth;
 
 vec4 split_colors(int data)
 {
+    // TODO: Check if the value shouldn't be shifted to get a range of [0 to 31], set alpha to 31.0f and divide by 31.0f outside
     vec4 color;
-    color.r = (data << 3) & 0xf8;
+    color.r = (data << 3) & 0xf8; // This will give a range of 0, [8, 248]. Not 0 to 255
     color.g = (data >> 2) & 0xf8;
     color.b = (data >> 7) & 0xf8;
     color.a = 255.0f;
@@ -23,22 +23,29 @@ vec4 split_colors(int data)
 
 vec4 sample_texel()
 {
-    // For now only testing with depth 4
-    vec4 index = texture2D(vramTexture, tex_coords);
-    int texel = clut4[int(index.r * 255)];
-
-    return split_colors(texel) / vec4(255.0f);
+    if (colorDepth == 4)
+    {
+        int index = int(texture2D(vramTexture4, TexCoord / vec2(4096.0, 512.0)).r * 255.0);
+        int texel = clut4[int(index)];
+        return split_colors(texel) / vec4(255.0f);
+    }
+    else
+    {
+        return vec4(1.0, 1.0, 0.0, 1.0);
+        // TODO: vramTexture16 here
+        //int texel = int(texture2D(vramTexture4, TexCoord).r * 255);
+        //return split_colors(texel) / vec4(255.0f);
+    }
 }
 
 void main() 
-{ 
-    frag_color = vec4(color, 1.0);
-    //if (tex_coords.x == -1 && tex_coords.y == -1) // hack for color vs tex ? See if better solution
-    //{
-    //    frag_color = vec4(color, 1.0);
-    //}
-    //else
-    //{
-    //    frag_color = sample_texel(); //todo
-    //}
+{
+    if (TexCoord != vec2(69.0, 69.0))
+    {
+       frag_color = sample_texel();
+    }
+    else
+    {
+       frag_color = vec4(color, 1.0);
+    }
 }

@@ -2,10 +2,10 @@
 
 in ivec2 vertexPosition; 
 in uvec3 vertexColor;
-in vec2 tex_coord;
+in ivec2 aTexCoord;
 
 out vec3 color;
-out vec2 tex_coords;
+out vec2 TexCoord;
 
 uniform ivec2 offset;
 
@@ -25,5 +25,5 @@ void main()
                  float(vertexColor.g) / 255,
                  float(vertexColor.b) / 255);
 
-    tex_coords = tex_coord;
+    TexCoord = vec2(float(aTexCoord.x), float(aTexCoord.y));
 }
